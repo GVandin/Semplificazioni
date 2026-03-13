@@ -38,38 +38,35 @@
     <script>
         let selected = [];
 
-        function parseToBlocks(expr) {
-            expr = expr.replace(/\s+/g, '');
-            let blocks = [];
-            let pos = 0;
+       function parseToBlocks(expr) {
+    // 1. Aggiungiamo un marker '*' dove c'è una moltiplicazione implicita
+    // Es: (x+3)(x-9) -> (x+3)*(x-9)
+    // Es: x(x+3) -> x*(x+3)
+    let normalized = expr
+        .replace(/\)(?=[a-zA-Z0-9\(])/g, ')*')
+        .replace(/(?<=[a-zA-Z0-9])(?=\()/g, '*')
+        .replace(/(?<=[a-zA-Z0-9])(?=[a-zA-Z])/g, '*');
 
-            function scan() {
-                let current = "";
-                let balance = 0;
-                while (pos < expr.length) {
-                    let char = expr[pos];
-                    if (char === '(') balance++;
-                    else if (char === ')') balance--;
+    let blocks = [];
+    let balance = 0;
+    let current = "";
 
-                    // Se incontriamo un segno di somma fuori parentesi, chiudiamo il blocco precedente
-                    if (balance === 0 && (char === '+' || char === '-')) {
-                        if (current) blocks.push(current);
-                        blocks.push(char); // Il segno è un blocco
-                        current = "";
-                        pos++;
-                    } 
-                    // Se incontriamo una moltiplicazione implicita (es: x( o )( )
-                    else if (balance === 0 && pos > 0 && isMult(expr[pos-1], char)) {
-                        if (current) blocks.push(current);
-                        current = char;
-                        pos++;
-                    } else {
-                        current += char;
-                        pos++;
-                    }
-                }
-                if (current) blocks.push(current);
-            }
+    for (let i = 0; i < normalized.length; i++) {
+        let char = normalized[i];
+        if (char === '(') balance++;
+        if (char === ')') balance--;
+
+        // Spezziamo se siamo a livello 0 (fuori parentesi) e troviamo un operatore di moltiplicazione
+        if (char === '*' && balance === 0) {
+            blocks.push(current);
+            current = "";
+        } else {
+            current += char;
+        }
+    }
+    if (current) blocks.push(current);
+    return blocks.filter(b => b.trim() !== "");
+}
 
             function isMult(prev, curr) {
                 return (prev === ')' && curr === '(') || 
