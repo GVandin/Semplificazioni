@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Semplificatore Algebrico</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .fraction { display: flex; flex-direction: column; align-items: center; border: 2px solid #333; padding: 20px; border-radius: 10px; }
+        .line { width: 100%; height: 2px; background: #333; margin: 10px 0; }
+        .row { display: flex; gap: 10px; min-height: 50px; padding: 10px; }
+        
+        .block { 
+            border: 2px solid #333; padding: 10px; border-radius: 5px; 
+            cursor: pointer; background: white; font-weight: bold; transition: 0.2s;
+        }
+        .selected { border: 4px solid #007bff; background: #e7f1ff; }
+        .simplified { text-decoration: line-through; opacity: 0.4; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <h2>Clicca su un blocco sopra e uno sotto per semplificare</h2>
+
+    <div class="fraction">
+        <div id="numerator" class="row">
+            <div class="block" data-val="(x-y)"> (x-y) </div>
+            <div class="block" data-val="(x+y)"> (x+y) </div>
+        </div>
+        <div class="line"></div>
+        <div id="denominator" class="row">
+            <div class="block" data-val="(x-y)"> (x-y) </div>
+            <div class="block" data-val="5"> 5 </div>
+        </div>
+    </div>
+
+    <script>
+        let selected = [];
+
+        document.querySelectorAll('.block').forEach(block => {
+            block.addEventListener('click', function() {
+                if (this.classList.contains('simplified')) return;
+
+                this.classList.toggle('selected');
+                
+                if (this.classList.contains('selected')) {
+                    selected.push(this);
+                } else {
+                    selected = selected.filter(item => item !== this);
+                }
+
+                if (selected.length === 2) {
+                    simplify();
+                }
+            });
+        });
+
+        function simplify() {
+            const [a, b] = selected;
+            // Controlla se sono in zone diverse (uno sopra, uno sotto)
+            const parentA = a.parentElement.id;
+            const parentB = b.parentElement.id;
+
+            if (parentA !== parentB && a.dataset.val === b.dataset.val) {
+                a.classList.add('simplified');
+                b.classList.add('simplified');
+                a.classList.remove('selected');
+                b.classList.remove('selected');
+            } else {
+                alert("Non puoi semplificare!");
+                selected.forEach(el => el.classList.remove('selected'));
+            }
+            selected = [];
+        }
+    </script>
+</body>
+</html>
