@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Lavagna Algebrica 1</title>
+    <title>Lavagna Algebrica</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
         .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
@@ -47,6 +47,14 @@
         function parseToBlocks(expr) {
             expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
             if (!expr) return [];
+
+            let blocks = [];
+    
+            // 1. Isoliamo il segno meno iniziale se presente
+            if (expr.startsWith('-')) {
+                blocks.push("-");
+                expr = expr.substring(1);
+            }
 
             // Controllo se è un Polinomio (presenza di + o - fuori dalle parentesi)
             let bal = 0;
