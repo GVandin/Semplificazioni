@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Validatore Algebrico</title>
+    <title>Semplificatore Algebrico</title>
     <style>
         .container { border: 2px solid #333; padding: 20px; margin: 10px; min-height: 50px; display: flex; gap: 10px; align-items: center; }
         .block { padding: 10px; border: 1px solid #ccc; cursor: pointer; user-select: none; background: #f9f9f9; }
@@ -18,7 +18,6 @@
     <script>
         let selected = [];
 
-        // 1. MOTORE DI VERIFICA (Prova del nove)
         function areEquivalent(e1, e2) {
             try {
                 const prepare = (str) => {
@@ -30,7 +29,6 @@
                 };
                 const p1 = prepare(e1), p2 = prepare(e2);
                 const vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
-                
                 for (let i = 0; i < 3; i++) {
                     let scope = {};
                     vars.forEach(v => scope[v] = Math.random() * 5 + 1);
@@ -45,19 +43,6 @@
             } catch(e) { return false; }
         }
 
-        // 2. VALIDATORE DI SCOMPOSIZIONE
-        function verifyScomposizione(bloccoOriginale, espressioneNuova) {
-            // Verifica se l'espressione inserita è equivalente al blocco originale
-            if (areEquivalent(bloccoOriginale, espressioneNuova)) {
-                alert("Scomposizione corretta!");
-                return true;
-            } else {
-                alert("Scomposizione errata, riprova!");
-                return false;
-            }
-        }
-
-        // 3. PARSER GERARCHICO
         function parseToBlocks(expr) {
             expr = expr.replace(/\s+/g, '');
             let blocks = [];
@@ -79,7 +64,6 @@
             return blocks;
         }
 
-        // 4. GESTIONE INTERATTIVA
         function addBlock(container, content) {
             let div = document.createElement('div');
             div.className = 'block';
@@ -95,10 +79,10 @@
             container.appendChild(div);
         }
 
-        // 5. LOGICA DI SEMPLIFICAZIONE
         function simplify() {
             let [a, b] = selected;
             if (a.parentElement === b.parentElement) {
+                alert("Seleziona uno al numeratore e uno al denominatore!");
                 selected.forEach(el => el.classList.remove('selected'));
                 selected = [];
                 return;
@@ -117,6 +101,13 @@
             selected.forEach(el => el.classList.remove('selected'));
             selected = [];
         }
+
+        window.onload = () => {
+            const num = parseToBlocks("x^2(x+3)(x-3)");
+            const den = parseToBlocks("x(x-3)");
+            num.forEach(b => addBlock(document.getElementById('numerator'), b));
+            den.forEach(b => addBlock(document.getElementById('denominator'), b));
+        };
     </script>
 </body>
-</html>    
+</html>
