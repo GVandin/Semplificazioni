@@ -38,33 +38,34 @@
     <script>
         let selected = [];
 
-       function parseToBlocks(expr) {
-    // 1. Aggiungiamo un marker '*' dove c'è una moltiplicazione implicita
-    // Es: (x+3)(x-9) -> (x+3)*(x-9)
-    // Es: x(x+3) -> x*(x+3)
-    let normalized = expr
-        .replace(/\)(?=[a-zA-Z0-9\(])/g, ')*')
-        .replace(/(?<=[a-zA-Z0-9])(?=\()/g, '*')
-        .replace(/(?<=[a-zA-Z0-9])(?=[a-zA-Z])/g, '*');
-
+     function parseToBlocks(expr) {
     let blocks = [];
-    let balance = 0;
     let current = "";
+    let balance = 0; // Pila delle parentesi
 
-    for (let i = 0; i < normalized.length; i++) {
-        let char = normalized[i];
+    for (let i = 0; i < expr.length; i++) {
+        let char = expr[i];
+        
         if (char === '(') balance++;
-        if (char === ')') balance--;
+        else if (char === ')') balance--;
 
-        // Spezziamo se siamo a livello 0 (fuori parentesi) e troviamo un operatore di moltiplicazione
-        if (char === '*' && balance === 0) {
+        // Se siamo a livello 0 (fuori parentesi) e troviamo un punto di rottura
+        // I punti di rottura sono: l'inizio di una nuova parentesi (o monomio)
+        // MA dobbiamo assicurarci di non spezzare mai se siamo nel mezzo di un polinomio ( + o - )
+        
+        let isBoundary = (balance === 0 && 
+                         (char === '(' || /[a-zA-Z0-9]/.test(char)) && 
+                         current !== "");
+
+        // Però: non spezzare se il blocco precedente contiene già un operatore
+        if (isBoundary && !/[+\-]/.test(current)) {
             blocks.push(current);
             current = "";
-        } else {
-            current += char;
         }
+        
+        current += char;
     }
-    if (current) blocks.push(current);
+    blocks.push(current);
     return blocks.filter(b => b.trim() !== "");
 }
 
