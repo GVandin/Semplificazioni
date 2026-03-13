@@ -17,7 +17,7 @@
 </head>
 <body>
 
-    <h2>Lavagna Algebrica</h2>
+    <h2>Lavagna Algebrica PRo</h2>
     <div class="controls">
         <input type="text" id="numInput" placeholder="Numeratore">
         <input type="text" id="denInput" placeholder="Denominatore">
@@ -65,21 +65,38 @@
         }
 
         function areEquivalent(e1, e2) {
-            try {
-                const vars = [...new Set((e1 + e2).match(/[a-z]/gi))];
-                for (let i = 0; i < 3; i++) {
-                    let scope = {};
-                    vars.forEach(v => scope[v] = Math.random() * 5 + 1);
-                    const ev = (e) => {
-                        let str = e.replace(/\^/g, '**');
-                        vars.forEach(v => str = str.replace(new RegExp(v, 'g'), `(${scope[v]})`));
-                        return eval(str);
-                    };
-                    if (Math.abs(ev(e1) - ev(e2)) > 0.001) return false;
-                }
-                return true;
-            } catch(e) { return false; }
+    try {
+        // Funzione per trasformare la notazione algebrica umana in notazione JavaScript
+        const prepare = (str) => {
+            return str
+                .replace(/\)\(/g, ')*(') // Trasforma )( in )*(
+                .replace(/([a-zA-Z0-9])\(/g, '$1*(') // Trasforma x( in x*(
+                .replace(/\)([a-zA-Z0-9])/g, ')*$1') // Trasforma )x in )*x
+                .replace(/\^/g, '**'); // Trasforma ^ in ** per JS
+        };
+
+        const vars = [...new Set((e1 + e2).match(/[a-z]/gi))];
+        const p1 = prepare(e1);
+        const p2 = prepare(e2);
+
+        for (let i = 0; i < 3; i++) {
+            let scope = {};
+            vars.forEach(v => scope[v] = Math.random() * 5 + 1);
+            
+            const ev = (expr) => {
+                let s = expr;
+                vars.forEach(v => s = s.replace(new RegExp(v, 'g'), `(${scope[v]})`));
+                return eval(s);
+            };
+
+            if (Math.abs(ev(p1) - ev(p2)) > 0.001) return false;
         }
+        return true;
+    } catch(e) { 
+        console.error("Errore di calcolo:", e);
+        return false; 
+    }
+}
 
         function addBlock(container, content) {
             let div = document.createElement('div');
