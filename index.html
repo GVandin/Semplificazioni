@@ -122,21 +122,30 @@
         return false; 
     }
 }
-
-        function addBlock(container, content) {
+        
+function addBlock(container, content) {
             let div = document.createElement('div');
             div.className = 'block';
             div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
             div.dataset.content = content;
+            
             div.onclick = function() {
                 if (this.classList.contains('simplified')) return;
+
+                // 1. Facciamo il toggle visivo
                 this.classList.toggle('selected');
-                if (this.classList.contains('selected')) selected.push(this);
-                else selected = selected.filter(el => el !== this);
+
+                // 2. Aggiorniamo l'array selected
+                if (this.classList.contains('selected')) {
+                    selected.push(this);
+                } else {
+                    // Se lo stiamo deselezionando, lo togliamo dall'array
+                    selected = selected.filter(el => el !== this);
+                }
                 
+                // 3. Solo se abbiamo effettivamente 2 blocchi DIVERSI selezionati
                 if (selected.length === 2) {
-                    if (selected[0] !== selected[1]) simplify();
-                    else { this.classList.remove('selected'); selected = []; }
+                    simplify();
                 }
             };
             container.appendChild(div);
