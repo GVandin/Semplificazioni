@@ -101,16 +101,62 @@
         }
 
         function simplify() {
-            let [a, b] = selected;
-            if (areEquivalent(a.dataset.content, b.dataset.content)) {
-                a.classList.add('simplified');
-                b.classList.add('simplified');
-            } else {
-                alert("Non semplificabili!");
-            }
-            selected.forEach(el => el.classList.remove('selected'));
-            selected = [];
+    let [a, b] = selected;
+    let c1 = a.dataset.content;
+    let c2 = b.dataset.content;
+
+    // 1. Funzione per estrarre la base e l'esponente da un blocco
+    function getBaseAndExp(expr) {
+        // Cerca un esponente finale (es: ^2). Se non c'è, l'esponente è 1.
+        let match = expr.match(/^(.*?)(?:\^(\d+))?$/);
+        let base = match[1];
+        let exp = match[2] ? parseInt(match[2]) : 1;
+        return { base, exp };
+    }
+
+    let obj1 = getBaseAndExp(c1);
+    let obj2 = getBaseAndExp(c2);
+
+    // 2. Controlliamo se le BASI sono equivalenti (così (x+1) e x+1 risultano uguali!)
+    if (areEquivalent(obj1.base, obj2.base)) {
+        
+        // Troviamo l'esponente minore per sottrarlo a entrambi
+        let minExp = Math.min(obj1.exp, obj2.exp);
+        let newExp1 = obj1.exp - minExp;
+        let newExp2 = obj2.exp - minExp;
+
+        // Aggiorniamo il primo blocco
+        if (newExp1 === 0) {
+            a.classList.add('simplified');
+        } else {
+            // Se resta esponente 1, togliamo il ^, altrimenti lo rimettiamo
+            let newContent = newExp1 === 1 ? obj1.base : `${obj1.base}^${newExp1}`;
+            a.dataset.content = newContent;
+            a.innerHTML = newContent.replace(/\^(\d+)/g, '<sup>$1</sup>');
         }
+
+        // Aggiorniamo il secondo blocco
+        if (newExp2 === 0) {
+            b.classList.add('simplified');
+        } else {
+            let newContent = newExp2 === 1 ? obj2.base : `${obj2.base}^${newExp2}`;
+            b.dataset.content = newContent;
+            b.innerHTML = newContent.replace(/\^(\d+)/g, '<sup>$1</sup>');
+        }
+
+    } 
+    // 3. Fallback: se non sono potenze ma interi blocchi equivalenti numericamente
+    else if (areEquivalent(c1, c2)) {
+        a.classList.add('simplified');
+        b.classList.add('simplified');
+    } else {
+        alert("Non semplificabili!");
+    }
+    
+    // Reset della selezione
+    selected.forEach(el => el.classList.remove('selected'));
+    selected = [];
+}
 
         function decomposeBlock() {
             if (selected.length !== 1) return alert("Seleziona 1 blocco!");
