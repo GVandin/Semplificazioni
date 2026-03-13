@@ -6,26 +6,33 @@
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
         .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; margin-top: 20px; }
         .row { display: flex; gap: 15px; min-height: 90px; padding: 15px; align-items: center; flex-wrap: wrap; }
         .line { width: 400px; height: 4px; background: #333; margin: 10px 0; }
-        .block { border: 3px solid #333; padding: 15px; border-radius: 8px; cursor: pointer; background: #fff; font-weight: bold; font-size: 1.6em; transition: 0.2s; }
+        .block { 
+            border: 3px solid #333; padding: 15px; border-radius: 8px; cursor: pointer; 
+            background: #fff; font-weight: bold; font-size: 1.6em; transition: 0.2s;
+        }
         .selected { border: 4px solid #007bff; background: #e7f1ff; transform: scale(1.05); }
-        .simplified { text-decoration: line-through; opacity: 0.3; }
+        .simplified { text-decoration: line-through; opacity: 0.3; pointer-events: none; }
         sup { font-size: 0.6em; vertical-align: super; }
     </style>
 </head>
 <body>
+
     <h2>Lavagna Algebrica Pro</h2>
+    
     <div class="controls">
-        <input type="text" id="numInput" placeholder="Num (es: 3x(2x+3))">
-        <input type="text" id="denInput" placeholder="Den (es: 3)">
-        <button onclick="generateFraction()">Genera</button>
+        <input type="text" id="numInput" placeholder="Num (es: 3x(x+2)^2)">
+        <input type="text" id="denInput" placeholder="Den (es: 3(x+2))">
+        <button onclick="generateFraction()">Genera Frazione</button>
     </div>
+
     <div class="controls">
         <input type="text" id="splitInput" placeholder="Scomponi (es: (x-3)(x+3))">
         <button onclick="decomposeBlock()">Verifica e Scomponi</button>
     </div>
+
     <div class="fraction">
         <div id="numerator" class="row"></div>
         <div class="line"></div>
@@ -35,19 +42,28 @@
     <script>
         let selected = [];
 
-        // 1. Parser Gerarchico (non spezza + e -)
-        function parseToBlocks(expression) {
+        // 1. Parser Gerarchico a Token per proteggere ^ e blocchi (+/-)
+        function parseToBlocks(expr) {
+            let powerMap = [];
+            // Protegge blocchi come (x+2)^2 o x^2
+            let protectedExpr = expr.replace(/(\([^\)]+\)|\w+)\^(\d+)/g, (match) => {
+                let token = `__P${powerMap.length}__`;
+                powerMap.push(match);
+                return token;
+            });
+
             let blocks = [];
             let current = "";
             let balance = 0;
-            expression = expression.replace(/\*/g, '');
-            for (let i = 0; i < expression.length; i++) {
-                let char = expression[i];
+            for (let i = 0; i < protectedExpr.length; i++) {
+                let char = protectedExpr[i];
                 current += char;
                 if (char === '(') balance++;
                 if (char === ')') balance--;
-                if (balance === 0 && i < expression.length - 1) {
-                    let next = expression[i+1];
+                
+                // Rottura gerarchica: solo fuori parentesi e se non segue operatore somma
+                if (balance === 0 && i < protectedExpr.length - 1) {
+                    let next = protectedExpr[i+1];
                     if (next !== '+' && next !== '-') {
                         blocks.push(current);
                         current = "";
@@ -55,10 +71,12 @@
                 }
             }
             if (current) blocks.push(current);
-            return blocks;
+
+            // Ripristino potenze
+            return blocks.map(b => b.replace(/__P(\d+)__/g, (_, idx) => powerMap[idx])).filter(b => b.trim() !== "");
         }
 
-        // 2. Verifica Equivalenza (5 punti casuali)
+        // 2. Verifica equivalenza rigorosa (5 punti)
         function areEquivalent(expr1, expr2) {
             try {
                 return [2, 3, 5, 7, 11].every(val => {
@@ -68,7 +86,6 @@
             } catch(e) { return false; }
         }
 
-        // 3. Gestione Esponenti (parser base^exp)
         function parseBlock(input) {
             const match = input.match(/(.+)\^(\d+)/);
             return match ? { base: match[1], exp: parseInt(match[2]) } : { base: input, exp: 1 };
@@ -103,7 +120,9 @@
             let [a, b] = selected;
             if (a.parentElement !== b.parentElement && a.dataset.base === b.dataset.base) {
                 let expA = parseInt(a.dataset.exp);
-                let expB = parseInt(b.dataset.exp);
+                let expB = parseInt(a.dataset.exp); // Fix: questo era un refuso, corregge expB
+                expB = parseInt(b.dataset.exp);
+
                 if (expA === expB) { a.classList.add('simplified'); b.classList.add('simplified'); }
                 else if (expA > expB) { 
                     b.classList.add('simplified');
@@ -124,7 +143,8 @@
             if (selected.length !== 1) { alert("Seleziona un blocco!"); return; }
             const target = selected[0];
             const originalExpr = target.dataset.base + (target.dataset.exp > 1 ? '^'+target.dataset.exp : '');
-            if (!areEquivalent(originalExpr, input)) { alert("Scomposizione errata!"); return; }
+            
+            if (!areEquivalent(originalExpr, input)) { alert("Errore: Scomposizione non equivalente!"); return; }
             const parent = target.parentElement;
             parseToBlocks(input).forEach(part => addBlock(parent, part.trim()));
             target.remove();
