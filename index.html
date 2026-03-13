@@ -142,38 +142,46 @@
             container.appendChild(div);
         }
 
-    function simplify() {
+   function simplify() {
     let [a, b] = selected;
     let c1 = a.dataset.content;
     let c2 = b.dataset.content;
 
-    // Se sono identici, eliminali
-    if (c1 === c2) {
+    // 1. Estrazione base ed esponente (rimane identica alla tua logica)
+    let match1 = c1.match(/^(.*?)(?:\^(\d+))?$/);
+    let match2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
+    
+    let base1 = match1[1];
+    let exp1 = match1[2] ? parseInt(match1[2]) : 1;
+    let base2 = match2[1];
+    let exp2 = match2[2] ? parseInt(match2[2]) : 1;
+
+    // 2. CONFRONTO INTELLIGENTE: usiamo areEquivalent sulle basi
+    // Questo risolve il problema (x+1) vs x+1 senza rompere il resto
+    if (areEquivalent(base1, base2)) {
+        // Se le basi sono uguali (o equivalenti), procediamo come nella tua funzione
         a.classList.add('simplified');
         b.classList.add('simplified');
-    } 
-    // Se sono potenze della stessa base (es: x^2 e x)
-    else {
-        let match1 = c1.match(/(.+)\^(\d+)/);
-        let match2 = c2.match(/(.+)\^(\d+)/);
-        let base1 = match1 ? match1[1] : c1;
-        let exp1 = match1 ? parseInt(match1[2]) : 1;
-        let base2 = match2 ? match2[1] : c2;
-        let exp2 = match2 ? parseInt(match2[2]) : 1;
-
-        if (base1 === base2) {
-            a.classList.add('simplified');
-            b.classList.add('simplified');
-            let diff = exp1 - exp2;
-            if (diff > 0) addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
-            else if (diff < 0) addBlock(b.parentElement, Math.abs(diff) === 1 ? base1 : `${base1}^${Math.abs(diff)}`);
-        } else if (areEquivalent(c1, c2)) {
-            a.classList.add('simplified');
-            b.classList.add('simplified');
-        } else {
-            alert("Non semplificabili!");
+        
+        let diff = exp1 - exp2;
+        if (diff > 0) {
+            // Se resta qualcosa al numeratore
+            addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
+        } else if (diff < 0) {
+            // Se resta qualcosa al denominatore
+            addBlock(b.parentElement, Math.abs(diff) === 1 ? base2 : `${base2}^${Math.abs(diff)}`);
         }
+        // Se diff === 0, entrambi spariscono e non aggiungiamo nulla (corretto!)
+    } 
+    // 3. Fallback per blocchi interi (es. se semplifichi 10 con 10 o x^2 con x^2)
+    else if (areEquivalent(c1, c2)) {
+        a.classList.add('simplified');
+        b.classList.add('simplified');
+    } else {
+        alert("Non semplificabili!");
     }
+
+    selected.forEach(el => el.classList.remove('selected'));
     selected = [];
 }
 
