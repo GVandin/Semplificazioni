@@ -45,38 +45,10 @@
 
         // --- MOTORE DI PARSING ---
         function parseToBlocks(expr) {
-    expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
-    if (!expr) return [];
+            expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
+            if (!expr) return [];
 
-    // --- NUOVA LOGICA DI CONTROLLO SEGNO ---
-    let tempExpr = expr;
-    let leadingMinus = false;
-
-    // Se inizia con meno, facciamo un test "temporaneo"
-    if (tempExpr.startsWith('-')) {
-        let rest = tempExpr.substring(1);
-        let bal = 0;
-        let isRestPoly = false;
-
-        // Controlliamo se nel RESTO della stringa ci sono + o - liberi
-        for (let i = 0; i < rest.length; i++) {
-            if (rest[i] === '(') bal++;
-            if (rest[i] === ')') bal--;
-            if (bal === 0 && (rest[i] === '+' || (rest[i] === '-' && rest[i-1] !== '^'))) {
-                isRestPoly = true;
-                break;
-            }
-        }
-
-        // Se il resto NON è un polinomio (es: -x, -2(x+1)), allora il meno è un fattore
-        if (!isRestPoly) {
-            leadingMinus = true;
-            expr = rest; 
-        }
-    }
-
-    let blocks = [];
-    if (leadingMinus) blocks.push("-");
+    if (!expr) return blocks;
 
             // Controllo se è un Polinomio (presenza di + o - fuori dalle parentesi)
             let bal = 0;
@@ -165,19 +137,6 @@ function getGCD(a, b) {
             selected = [];
             return;
         }
-    }
-            // --- LOGICA SPECIALE PER I SEGNI MENO ---
-    if (c1 === "-" && c2 === "-") {
-        // Funziona sia se sono nello stesso parent (es. numeratore) 
-        // sia se sono uno sopra e uno sotto
-        a.classList.add('simplified');
-        b.classList.add('simplified');
-        
-        // Se erano nello stesso lato (es. - * -), potresti voler aggiungere un "+" 
-        // ma in algebra solitamente si lascia vuoto (sottointeso)
-        
-        resetSelection();
-        return;
     }
 
     // --- LOGICA ALGEBRICA (Invariata) ---
