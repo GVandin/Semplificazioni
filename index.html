@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Lavagna Algebrica</title>
+    <title>Lavagna Algebrica 1</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
         .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
@@ -100,7 +100,8 @@ function getGCD(a, b) {
         [a, b] = [b, a];
     }
     return a;
-}function handleSimplification() {
+}
+        function simplify() {
     const [a, b] = selected;
     if (a.parentElement === b.parentElement) {
         alert("Puoi semplificare solo tra numeratore e denominatore!");
@@ -211,29 +212,7 @@ function getGCD(a, b) {
             container.appendChild(div);
         }
 
-        function simplify() {
-            let [a, b] = selected;
-            if (a.parentElement.id === b.parentElement.id) {
-                alert("Semplifica tra sopra e sotto!");
-            } else {
-                let c1 = a.dataset.content, c2 = b.dataset.content;
-                let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
-                let base1 = m1[1], exp1 = parseInt(m1[2] || 1);
-                let base2 = m2[1], exp2 = parseInt(m2[2] || 1);
 
-                if (areEquivalent(base1, base2)) {
-                    a.classList.add('simplified');
-                    b.classList.add('simplified');
-                    let diff = exp1 - exp2;
-                    if (diff > 0) addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
-                    else if (diff < 0) addBlock(b.parentElement, Math.abs(diff) === 1 ? base2 : `${base2}^${Math.abs(diff)}`);
-                } else {
-                    alert("Basi diverse!");
-                }
-            }
-            selected.forEach(el => el.classList.remove('selected'));
-            selected = [];
-        }
 
         function decomposeBlock() {
             if (selected.length !== 1) return alert("Seleziona un solo blocco da scomporre!");
