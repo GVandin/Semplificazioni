@@ -23,13 +23,13 @@
     <h2>Lavagna Algebrica - Tutor Intelligente</h2>
     
     <div class="controls">
-        <input type="text" id="numInput" placeholder="Numeratore (es: x^2-1)">
-        <input type="text" id="denInput" placeholder="Denominatore (es: x-1)">
+        <input type="text" id="numInput" placeholder="Numeratore (es: x^2-9)">
+        <input type="text" id="denInput" placeholder="Denominatore (es: (x-3)(x+3))">
         <button onclick="generateFraction()">Genera Frazione</button>
     </div>
 
     <div class="controls">
-        <input type="text" id="splitInput" placeholder="Scomponi in (es: (x-1)(x+1))">
+        <input type="text" id="splitInput" placeholder="Scomponi in (es: (x-3)(x+3))">
         <button onclick="decomposeBlock()">Verifica e Scomponi</button>
     </div>
 
@@ -42,7 +42,7 @@
     <script>
         let selected = [];
 
-        // Motore di verifica basato su 5 punti casuali per evitare coincidenze
+        // Verifica equivalenza su 5 punti casuali
         function areEquivalent(expr1, expr2) {
             try {
                 let randomValues = [];
@@ -57,6 +57,12 @@
             } catch(e) { return false; }
         }
 
+        // Il Parser "Blindato": spezza solo tra parentesi )(
+        function parseToBlocks(expression) {
+            // Dividiamo solo dove c'è ) seguita da (
+            return expression.split(/(?<=\))(?=\()/g).filter(p => p.trim() !== "");
+        }
+
         function parseBlock(input) {
             const match = input.match(/(.+)\^(\d+)/);
             return match ? { base: match[1], exp: parseInt(match[2]) } : { base: input, exp: 1 };
@@ -66,11 +72,8 @@
             const data = parseBlock(content);
             const div = document.createElement('div');
             div.className = 'block';
-            
-            // Logica: mostra l'esponente solo se > 1
             const exponentDisplay = data.exp > 1 ? `<sup>${data.exp}</sup>` : "";
             div.innerHTML = `${data.base}${exponentDisplay}`;
-            
             div.dataset.base = data.base;
             div.dataset.exp = data.exp;
             div.onclick = function() { toggleSelect(this); };
@@ -82,8 +85,7 @@
                 const container = document.getElementById(id);
                 container.innerHTML = '';
                 const val = document.getElementById(id === 'numerator' ? 'numInput' : 'denInput').value;
-                const regex = /(?=\()(?<=\))|(?<=\))(?=[a-zA-Z0-9])|(?<=[a-zA-Z0-9])(?=\()/g;
-                val.replace(/\*/g, '').split(regex).forEach(part => {
+                parseToBlocks(val).forEach(part => {
                     if(part.trim()) addBlock(container, part.trim());
                 });
             });
@@ -101,7 +103,6 @@
             if (a.parentElement !== b.parentElement && a.dataset.base === b.dataset.base) {
                 let expA = parseInt(a.dataset.exp);
                 let expB = parseInt(b.dataset.exp);
-                
                 if (expA === expB) { 
                     a.classList.add('simplified'); b.classList.add('simplified'); 
                 } else if (expA > expB) { 
@@ -130,9 +131,8 @@
             }
 
             const parent = target.parentElement;
-            const regex = /(?=\()(?<=\))|(?<=\))(?=[a-zA-Z0-9])|(?<=[a-zA-Z0-9])(?=\()/g;
-            input.replace(/\*/g, '').split(regex).forEach(part => {
-                if(part.trim()) addBlock(parent, part.trim());
+            parseToBlocks(input).forEach(part => {
+                addBlock(parent, part.trim());
             });
             target.remove();
             selected = [];
