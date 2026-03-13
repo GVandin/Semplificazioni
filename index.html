@@ -38,31 +38,13 @@
         let selected = [];
 
         // Parser a giunzioni esplicite
-       function parseToBlocks(expr) {
+      function parseToBlocks(expr) {
     expr = expr.replace(/\s+/g, '');
     if (!expr) return [];
 
-    // 1. Controllo Polinomio: se c'è un + o - al livello principale, è un blocco UNICO.
-    let balance = 0;
-    let isPolynomial = false;
-    // Partiamo da 1 per tollerare un eventuale segno meno all'inizio (es: -x^2)
-    for (let i = 1; i < expr.length; i++) {
-        if (expr[i] === '(') balance++;
-        else if (expr[i] === ')') balance--;
-        
-        if (balance === 0 && (expr[i] === '+' || expr[i] === '-')) {
-            isPolynomial = true;
-            break;
-        }
-    }
-
-    // Se è un polinomio (es. x^2-9), restituisci l'intero blocco intatto!
-    if (isPolynomial) return [expr];
-
-    // 2. Se è una moltiplicazione, estraiamo i singoli fattori
     let blocks = [];
     let current = "";
-    balance = 0;
+    let balance = 0;
 
     for (let i = 0; i < expr.length; i++) {
         let char = expr[i];
@@ -72,14 +54,17 @@
         
         current += char;
 
-        // Condizione di taglio: siamo a livello 0 (fuori parentesi) e non siamo all'ultimo carattere
-        if (balance === 0 && i < expr.length - 1) {
+        // Regola di taglio:
+        // Spezziamo solo se siamo "fuori" dalle parentesi (balance == 0)
+        // e se abbiamo un blocco completo pronto per essere staccato.
+        if (balance === 0 && current.length > 0) {
             let nextChar = expr[i + 1];
-            let lastChar = current[current.length - 1];
 
-            // Tagliamo SOLO SE il prossimo carattere NON è un esponente (^)
-            // E siamo al confine di una parentesi (es: "...)" oppure il prossimo è "(" )
-            if (nextChar !== '^' && (lastChar === ')' || nextChar === '(')) {
+            // Condizione per spezzare:
+            // 1. Se il prossimo è una parentesi aperta (es: ...)(...)
+            // 2. Se il carattere corrente è una chiusura di parentesi (es: ...)(...)
+            // 3. Importante: NON spezzare se il prossimo carattere è un esponente ^
+            if (nextChar && nextChar !== '^') {
                 blocks.push(current);
                 current = "";
             }
