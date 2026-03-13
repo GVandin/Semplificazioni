@@ -1,33 +1,138 @@
-<script>
-    let selected = [];
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Lavagna Algebrica - Robusta</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
+        .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .row { display: flex; gap: 8px; min-height: 90px; padding: 15px; align-items: center; flex-wrap: wrap; border: 1px dashed #999; }
+        .line { width: 400px; height: 4px; background: #333; margin: 10px 0; }
+        .block { border: 3px solid #333; padding: 12px; border-radius: 8px; cursor: pointer; background: #fff; font-weight: bold; font-size: 1.5em; transition: 0.2s; }
+        .selected { border: 4px solid #007bff; background: #e7f1ff; transform: scale(1.05); }
+        .simplified { text-decoration: line-through; opacity: 0.3; pointer-events: none; }
+        sup { font-size: 0.6em; vertical-align: super; }
+    </style>
+</head>
+<body>
 
-    function parseToBlocks(expr) {
-        expr = expr.replace(/\s+/g, '');
-        let blocks = [];
-        let current = "";
-        let balance = 0;
+    <h2>Lavagna Algebrica</h2>
+    <div class="controls">
+        <input type="text" id="numInput" placeholder="Numeratore">
+        <input type="text" id="denInput" placeholder="Denominatore">
+        <button onclick="generateFraction()">Genera</button>
+    </div>
+    <div class="controls">
+        <input type="text" id="splitInput" placeholder="Scomponi blocco selezionato">
+        <button onclick="decomposeBlock()">Scomponi</button>
+    </div>
 
-        for (let i = 0; i < expr.length; i++) {
-            let char = expr[i];
-            
-            // Logica: se siamo fuori da ogni parentesi (balance 0)
-            // e incontriamo l'inizio di un blocco moltiplicativo, spezziamo.
-            if (balance === 0 && current !== "" && (char === '(' || /[a-zA-Z0-9]/.test(char))) {
-                // Regola: Spezza solo se il carattere precedente era una chiusura di parentesi ')'
-                // oppure se è un monomio che precede una parentesi.
-                if (expr[i-1] === ')' || char === '(') {
+    <div class="fraction">
+        <div id="numerator" class="row"></div>
+        <div class="line"></div>
+        <div id="denominator" class="row"></div>
+    </div>
+
+    <script>
+        let selected = [];
+
+        // Parser a giunzioni esplicite
+        function parseToBlocks(expr) {
+            expr = expr.replace(/\s+/g, '');
+            let blocks = [];
+            let current = "";
+            let balance = 0;
+
+            for (let i = 0; i < expr.length; i++) {
+                let char = expr[i];
+                let isClosing = char === ')';
+                let isOpening = char === '(';
+                let isAlphaNum = /[a-zA-Z0-9^]/.test(char);
+
+                // Punto di rottura: siamo fuori parentesi e c'è una giunzione
+                if (balance === 0 && current !== "" && (isOpening || (isAlphaNum && expr[i-1] === ')'))) {
                     blocks.push(current);
                     current = "";
                 }
+
+                if (isOpening) balance++;
+                else if (isClosing) balance--;
+                current += char;
             }
-
-            if (char === '(') balance++;
-            else if (char === ')') balance--;
-            current += char;
+            if (current) blocks.push(current);
+            return blocks;
         }
-        if (current) blocks.push(current);
-        return blocks;
-    }
 
-    // ... (Mantieni le funzioni areEquivalent, addBlock, simplify, decomposeBlock, generateFraction come prima)
-</script>
+        function areEquivalent(e1, e2) {
+            try {
+                const vars = [...new Set((e1 + e2).match(/[a-z]/gi))];
+                for (let i = 0; i < 3; i++) {
+                    let scope = {};
+                    vars.forEach(v => scope[v] = Math.random() * 5 + 1);
+                    const ev = (e) => {
+                        let str = e.replace(/\^/g, '**');
+                        vars.forEach(v => str = str.replace(new RegExp(v, 'g'), `(${scope[v]})`));
+                        return eval(str);
+                    };
+                    if (Math.abs(ev(e1) - ev(e2)) > 0.001) return false;
+                }
+                return true;
+            } catch(e) { return false; }
+        }
+
+        function addBlock(container, content) {
+            let div = document.createElement('div');
+            div.className = 'block';
+            div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
+            div.dataset.content = content;
+            div.onclick = function() {
+                if (this.classList.contains('simplified')) return;
+                this.classList.toggle('selected');
+                if (this.classList.contains('selected')) selected.push(this);
+                else selected = selected.filter(el => el !== this);
+                
+                if (selected.length === 2) {
+                    if (selected[0] !== selected[1]) simplify();
+                    else { this.classList.remove('selected'); selected = []; }
+                }
+            };
+            container.appendChild(div);
+        }
+
+        function simplify() {
+            let [a, b] = selected;
+            if (areEquivalent(a.dataset.content, b.dataset.content)) {
+                a.classList.add('simplified');
+                b.classList.add('simplified');
+            } else {
+                alert("Non semplificabili!");
+            }
+            selected.forEach(el => el.classList.remove('selected'));
+            selected = [];
+        }
+
+        function decomposeBlock() {
+            if (selected.length !== 1) return alert("Seleziona 1 blocco!");
+            let target = selected[0];
+            let input = document.getElementById('splitInput').value;
+            if (areEquivalent(target.dataset.content, input)) {
+                parseToBlocks(input).forEach(p => addBlock(target.parentElement, p));
+                target.remove();
+            } else {
+                alert("Scomposizione errata!");
+            }
+            selected = [];
+        }
+
+        function generateFraction() {
+            ['numerator', 'denominator'].forEach(id => {
+                const container = document.getElementById(id);
+                container.innerHTML = '';
+                parseToBlocks(document.getElementById(id === 'numerator' ? 'numInput' : 'denInput').value)
+                .forEach(p => addBlock(container, p));
+            });
+        }
+    </script>
+</body>
+</html>
