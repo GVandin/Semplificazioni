@@ -2,34 +2,29 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Lavagna Algebrica Pro</title>
+    <title>Lavagna Algebrica Avanzata</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
         .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; margin-top: 20px; }
+        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .row { display: flex; gap: 15px; min-height: 90px; padding: 15px; align-items: center; flex-wrap: wrap; }
         .line { width: 400px; height: 4px; background: #333; margin: 10px 0; }
-        .block { 
-            border: 3px solid #333; padding: 15px; border-radius: 8px; cursor: pointer; 
-            background: #fff; font-weight: bold; font-size: 1.6em; transition: 0.2s;
-        }
+        .block { border: 3px solid #333; padding: 15px; border-radius: 8px; cursor: pointer; background: #fff; font-weight: bold; font-size: 1.6em; }
         .selected { border: 4px solid #007bff; background: #e7f1ff; transform: scale(1.05); }
-        .simplified { text-decoration: line-through; opacity: 0.3; pointer-events: none; }
+        .simplified { text-decoration: line-through; opacity: 0.3; }
         sup { font-size: 0.6em; vertical-align: super; }
     </style>
 </head>
 <body>
 
-    <h2>Lavagna Algebrica Pro</h2>
-    
+    <h2>Lavagna Algebrica Avanzata</h2>
     <div class="controls">
-        <input type="text" id="numInput" placeholder="Num (es: 3x(x+2)^2)">
-        <input type="text" id="denInput" placeholder="Den (es: 3(x+2))">
-        <button onclick="generateFraction()">Genera Frazione</button>
+        <input type="text" id="numInput" placeholder="Numeratore (es: 3x^2(x+3))">
+        <input type="text" id="denInput" placeholder="Denominatore (es: x(3+x))">
+        <button onclick="generateFraction()">Genera</button>
     </div>
-
     <div class="controls">
-        <input type="text" id="splitInput" placeholder="Scomponi (es: (x-3)(x+3))">
+        <input type="text" id="splitInput" placeholder="Scomponi blocco selezionato">
         <button onclick="decomposeBlock()">Verifica e Scomponi</button>
     </div>
 
@@ -42,69 +37,91 @@
     <script>
         let selected = [];
 
-        // 1. Parser Gerarchico a Token per proteggere ^ e blocchi (+/-)
         function parseToBlocks(expr) {
-            let powerMap = [];
-            // Protegge blocchi come (x+2)^2 o x^2
-            let protectedExpr = expr.replace(/(\([^\)]+\)|\w+)\^(\d+)/g, (match) => {
-                let token = `__P${powerMap.length}__`;
-                powerMap.push(match);
-                return token;
-            });
-
             let blocks = [];
             let current = "";
             let balance = 0;
-            for (let i = 0; i < protectedExpr.length; i++) {
-                let char = protectedExpr[i];
+            expr = expr.replace(/\s+/g, '');
+
+            for (let i = 0; i < expr.length; i++) {
+                let char = expr[i];
                 current += char;
                 if (char === '(') balance++;
                 if (char === ')') balance--;
                 
-                // Rottura gerarchica: solo fuori parentesi e se non segue operatore somma
-                if (balance === 0 && i < protectedExpr.length - 1) {
-                    let next = protectedExpr[i+1];
+                if (balance === 0 && i < expr.length - 1) {
+                    let next = expr[i+1];
+                    // Regola di rottura: passa da digit a letter, o tra lettere diverse, o parentesi
+                    // MA ignora se è un segno + o -
                     if (next !== '+' && next !== '-') {
-                        blocks.push(current);
-                        current = "";
+                        if (/[a-zA-Z0-9]/.test(char) && /[a-zA-Z0-9]/.test(next) && 
+                           ((/\d/.test(char) && /[a-zA-Z]/.test(next)) || (/[a-zA-Z]/.test(char) && /\d/.test(next)) || 
+                           (/[a-zA-Z]/.test(char) && /[a-zA-Z]/.test(next) && char !== next) || next === '(' || char === ')')) {
+                            blocks.push(current);
+                            current = "";
+                        }
                     }
                 }
             }
             if (current) blocks.push(current);
-
-            // Ripristino potenze
-            return blocks.map(b => b.replace(/__P(\d+)__/g, (_, idx) => powerMap[idx])).filter(b => b.trim() !== "");
+            return blocks.filter(b => b.trim() !== "");
         }
 
-        // 2. Verifica equivalenza rigorosa (5 punti)
+        // Verifica basata su test casuali per ogni incognita rilevata
         function areEquivalent(expr1, expr2) {
             try {
-                return [2, 3, 5, 7, 11].every(val => {
-                    const evalExpr = (e) => eval(e.replace(/\^/g, '**').replace(/x/g, `(${val})`));
-                    return Math.abs(evalExpr(expr1) - evalExpr(expr2)) < 0.001;
-                });
+                const vars = [...new Set((expr1 + expr2).match(/[a-z]/g))];
+                for (let i = 0; i < 3; i++) {
+                    let scope = {};
+                    vars.forEach(v => scope[v] = Math.floor(Math.random() * 10) + 1);
+                    const evalE = (e) => {
+                        let str = e.replace(/\^/g, '**');
+                        vars.forEach(v => str = str.replace(new RegExp(v, 'g'), `(${scope[v]})`));
+                        return eval(str);
+                    };
+                    if (Math.abs(evalE(expr1) - evalE(expr2)) > 0.001) return false;
+                }
+                return true;
             } catch(e) { return false; }
         }
 
-        function parseBlock(input) {
-            const match = input.match(/(.+)\^(\d+)/);
-            return match ? { base: match[1], exp: parseInt(match[2]) } : { base: input, exp: 1 };
-        }
-
         function addBlock(container, content) {
-            const data = parseBlock(content);
             const div = document.createElement('div');
             div.className = 'block';
-            div.innerHTML = `${data.base}${data.exp > 1 ? '<sup>'+data.exp+'</sup>' : ''}`;
-            div.dataset.base = data.base;
-            div.dataset.exp = data.exp;
+            div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
+            div.dataset.content = content;
             div.onclick = function() {
                 this.classList.toggle('selected');
-                if (this.classList.contains('selected')) selected.push(this);
-                else selected = selected.filter(i => i !== this);
+                selected.push(this);
                 if (selected.length === 2) simplify();
             };
             container.appendChild(div);
+        }
+
+        function simplify() {
+            let [a, b] = selected;
+            // Verifica equivalenza per permettere semplificazione di blocchi diversi (es: x+3 e 3+x)
+            if (a.parentElement !== b.parentElement && areEquivalent(a.dataset.content, b.dataset.content)) {
+                a.classList.add('simplified');
+                b.classList.add('simplified');
+            } else {
+                alert("Semplificazione non valida!");
+            }
+            selected.forEach(el => el.classList.remove('selected'));
+            selected = [];
+        }
+
+        function decomposeBlock() {
+            if (selected.length !== 1) return alert("Seleziona un solo blocco!");
+            let target = selected[0];
+            let input = document.getElementById('splitInput').value;
+            if (areEquivalent(target.dataset.content, input)) {
+                parseToBlocks(input).forEach(p => addBlock(target.parentElement, p));
+                target.remove();
+            } else {
+                alert("Scomposizione errata!");
+            }
+            selected = [];
         }
 
         function generateFraction() {
@@ -112,44 +129,8 @@
                 const container = document.getElementById(id);
                 container.innerHTML = '';
                 parseToBlocks(document.getElementById(id === 'numerator' ? 'numInput' : 'denInput').value)
-                .forEach(part => { if(part.trim()) addBlock(container, part.trim()); });
+                .forEach(p => addBlock(container, p));
             });
-        }
-
-        function simplify() {
-            let [a, b] = selected;
-            if (a.parentElement !== b.parentElement && a.dataset.base === b.dataset.base) {
-                let expA = parseInt(a.dataset.exp);
-                let expB = parseInt(a.dataset.exp); // Fix: questo era un refuso, corregge expB
-                expB = parseInt(b.dataset.exp);
-
-                if (expA === expB) { a.classList.add('simplified'); b.classList.add('simplified'); }
-                else if (expA > expB) { 
-                    b.classList.add('simplified');
-                    a.dataset.exp = expA - expB;
-                    a.innerHTML = `${a.dataset.base}${a.dataset.exp > 1 ? '<sup>'+a.dataset.exp+'</sup>' : ''}`;
-                } else {
-                    a.classList.add('simplified');
-                    b.dataset.exp = expB - expA;
-                    b.innerHTML = `${b.dataset.base}${b.dataset.exp > 1 ? '<sup>'+b.dataset.exp+'</sup>' : ''}`;
-                }
-            } else { alert("Semplificazione non valida!"); }
-            selected.forEach(el => el.classList.remove('selected'));
-            selected = [];
-        }
-
-        function decomposeBlock() {
-            const input = document.getElementById('splitInput').value;
-            if (selected.length !== 1) { alert("Seleziona un blocco!"); return; }
-            const target = selected[0];
-            const originalExpr = target.dataset.base + (target.dataset.exp > 1 ? '^'+target.dataset.exp : '');
-            
-            if (!areEquivalent(originalExpr, input)) { alert("Errore: Scomposizione non equivalente!"); return; }
-            const parent = target.parentElement;
-            parseToBlocks(input).forEach(part => addBlock(parent, part.trim()));
-            target.remove();
-            selected = [];
-            document.getElementById('splitInput').value = '';
         }
     </script>
 </body>
