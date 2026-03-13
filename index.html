@@ -100,30 +100,58 @@
             container.appendChild(div);
         }
 
-        function simplify() {
-            let [a, b] = selected;
-            if (areEquivalent(a.dataset.content, b.dataset.content)) {
-                a.classList.add('simplified');
-                b.classList.add('simplified');
-            } else {
-                alert("Non semplificabili!");
-            }
-            selected.forEach(el => el.classList.remove('selected'));
-            selected = [];
+    function simplify() {
+    let [a, b] = selected;
+    let c1 = a.dataset.content;
+    let c2 = b.dataset.content;
+
+    // Se sono identici, eliminali
+    if (c1 === c2) {
+        a.classList.add('simplified');
+        b.classList.add('simplified');
+    } 
+    // Se sono potenze della stessa base (es: x^2 e x)
+    else {
+        let match1 = c1.match(/(.+)\^(\d+)/);
+        let match2 = c2.match(/(.+)\^(\d+)/);
+        let base1 = match1 ? match1[1] : c1;
+        let exp1 = match1 ? parseInt(match1[2]) : 1;
+        let base2 = match2 ? match2[1] : c2;
+        let exp2 = match2 ? parseInt(match2[2]) : 1;
+
+        if (base1 === base2) {
+            a.classList.add('simplified');
+            b.classList.add('simplified');
+            let diff = exp1 - exp2;
+            if (diff > 0) addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
+            else if (diff < 0) addBlock(b.parentElement, Math.abs(diff) === 1 ? base1 : `${base1}^${Math.abs(diff)}`);
+        } else if (areEquivalent(c1, c2)) {
+            a.classList.add('simplified');
+            b.classList.add('simplified');
+        } else {
+            alert("Non semplificabili!");
         }
+    }
+    selected = [];
+}
 
         function decomposeBlock() {
-            if (selected.length !== 1) return alert("Seleziona 1 blocco!");
-            let target = selected[0];
-            let input = document.getElementById('splitInput').value;
-            if (areEquivalent(target.dataset.content, input)) {
-                parseToBlocks(input).forEach(p => addBlock(target.parentElement, p));
-                target.remove();
-            } else {
-                alert("Scomposizione errata!");
-            }
-            selected = [];
-        }
+    if (selected.length !== 1) return alert("Seleziona 1 blocco!");
+    let target = selected[0];
+    let input = document.getElementById('splitInput').value;
+    
+    // Verifica matematica: l'input dell'utente deve valere quanto il blocco
+    if (areEquivalent(target.dataset.content, input)) {
+        // Rimuoviamo il vecchio blocco
+        target.classList.add('simplified');
+        // Usiamo il parser per dividere l'input di scomposizione in pezzi
+        parseToBlocks(input).forEach(p => addBlock(target.parentElement, p));
+        target.remove(); // Ora lo togliamo definitivamente
+    } else {
+        alert("Scomposizione errata: l'espressione non è equivalente!");
+    }
+    selected = [];
+}
 
         function generateFraction() {
             ['numerator', 'denominator'].forEach(id => {
