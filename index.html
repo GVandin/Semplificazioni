@@ -2,29 +2,35 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Lavagna Algebrica Pro</title>
+    <title>Lavagna Algebrica - Scomponi e Semplifica</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
-        .controls { margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; margin-top: 20px; }
         .row { display: flex; gap: 10px; min-height: 80px; padding: 10px; align-items: center; }
-        .line { width: 300px; height: 4px; background: #333; margin: 10px 0; }
+        .line { width: 400px; height: 4px; background: #333; margin: 10px 0; }
         .block { 
             border: 3px solid #333; padding: 15px; border-radius: 8px; cursor: pointer; 
             background: #fff; font-weight: bold; font-size: 1.5em; transition: 0.2s;
         }
-        .selected { border: 4px solid #007bff; background: #e7f1ff; }
+        .selected { border: 4px solid #007bff; background: #e7f1ff; transform: scale(1.05); }
         .simplified { text-decoration: line-through; opacity: 0.3; pointer-events: none; }
         sup { font-size: 0.6em; vertical-align: super; }
     </style>
 </head>
 <body>
 
-    <h2>Lavagna Algebrica</h2>
+    <h2>Lavagna: Scomponi e Semplifica</h2>
+    
     <div class="controls">
-        <input type="text" id="numInput" placeholder="es: (x+1)*(x-1)">
-        <input type="text" id="denInput" placeholder="es: (x-1)*5">
-        <button onclick="generateFraction()">Genera</button>
+        <input type="text" id="numInput" placeholder="Numeratore (es: x^2-1)">
+        <input type="text" id="denInput" placeholder="Denominatore (es: x-1)">
+        <button onclick="generateFraction()">Genera Frazione</button>
+    </div>
+
+    <div class="controls">
+        <input type="text" id="splitInput" placeholder="Scomponi in (es: (x-1)*(x+1))">
+        <button onclick="decomposeBlock()">Scomponi blocco selezionato</button>
     </div>
 
     <div class="fraction">
@@ -44,16 +50,21 @@
         function createBlocks(containerId, expression) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
-            const blocks = expression.split('*');
+            // Dividiamo per * solo se presente, altrimenti teniamo il blocco intero
+            const blocks = expression.includes('*') ? expression.split('*') : [expression];
             
             blocks.forEach(part => {
-                const div = document.createElement('div');
-                div.className = 'block';
-                div.innerHTML = part.replace(/\^(\d+)/g, '<sup>$1</sup>');
-                div.dataset.val = part.trim();
-                div.onclick = function() { toggleSelect(this); };
-                container.appendChild(div);
+                addBlock(container, part.trim());
             });
+        }
+
+        function addBlock(container, content) {
+            const div = document.createElement('div');
+            div.className = 'block';
+            div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
+            div.dataset.val = content;
+            div.onclick = function() { toggleSelect(this); };
+            container.appendChild(div);
         }
 
         function toggleSelect(el) {
@@ -70,10 +81,28 @@
                 a.classList.add('simplified'); b.classList.add('simplified');
                 a.classList.remove('selected'); b.classList.remove('selected');
             } else {
-                alert("Puoi semplificare solo blocchi identici!");
+                alert("Puoi semplificare solo blocchi identici (uno sopra e uno sotto)!");
                 selected.forEach(el => el.classList.remove('selected'));
             }
             selected = [];
+        }
+
+        function decomposeBlock() {
+            const input = document.getElementById('splitInput').value;
+            if (selected.length !== 1) {
+                alert("Seleziona esattamente un blocco da scomporre!");
+                return;
+            }
+            const target = selected[0];
+            const parent = target.parentElement;
+            
+            const newParts = input.split('*');
+            newParts.forEach(part => {
+                addBlock(parent, part.trim());
+            });
+            target.remove();
+            selected = [];
+            document.getElementById('splitInput').value = '';
         }
     </script>
 </body>
