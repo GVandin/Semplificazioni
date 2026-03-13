@@ -17,7 +17,7 @@
 </head>
 <body>
 
-    <h2>Lavagna Algebrica Pro</h2>
+    <h2>Lavagna Algebrica</h2>
     <div class="controls">
         <input type="text" id="numInput" placeholder="Numeratore">
         <input type="text" id="denInput" placeholder="Denominatore">
@@ -37,34 +37,58 @@
     <script>
         let selected = [];
 
-        // Parser a giunzioni esplicite
-      function parseToBlocks(expr) {
+/**
+ * MOTORE ALGEBRICO UNIFICATO
+ * Gestisce il parsing, la verifica e l'interazione dei blocchi.
+ */
+
+// Array globale per tenere traccia dei blocchi selezionati
+let selected = [];
+
+// 1. MOTORE DI VERIFICA (Prova del nove numerica)
+function areEquivalent(e1, e2) {
+    try {
+        const prepare = (str) => {
+            // Avvolge in parentesi per trattare il blocco come entità unica
+            let s = "(" + str + ")";
+            return s.replace(/([a-zA-Z0-9])\(/g, '$1*(')
+                    .replace(/\)\(/g, ')*(')
+                    .replace(/\)([a-zA-Z0-9])/g, ')*$1')
+                    .replace(/\^/g, '**');
+        };
+        const p1 = prepare(e1), p2 = prepare(e2);
+        const vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
+        
+        for (let i = 0; i < 3; i++) {
+            let scope = {};
+            vars.forEach(v => scope[v] = Math.random() * 5 + 1);
+            const ev = (expr) => {
+                let s = expr;
+                vars.forEach(v => s = s.replace(new RegExp(v, 'g'), `(${scope[v]})`));
+                return eval(s);
+            };
+            if (Math.abs(ev(p1) - ev(p2)) > 0.001) return false;
+        }
+        return true;
+    } catch(e) { return false; }
+}
+
+// 2. PARSER GERARCHICO (Mantiene l'esponente attaccato alla base)
+function parseToBlocks(expr) {
     expr = expr.replace(/\s+/g, '');
-    if (!expr) return [];
-
     let blocks = [];
-    let current = "";
-    let balance = 0;
-
+    let current = "", balance = 0;
+    
     for (let i = 0; i < expr.length; i++) {
         let char = expr[i];
-        
         if (char === '(') balance++;
         else if (char === ')') balance--;
-        
         current += char;
-
-        // Regola di taglio:
-        // Spezziamo solo se siamo "fuori" dalle parentesi (balance == 0)
-        // e se abbiamo un blocco completo pronto per essere staccato.
-        if (balance === 0 && current.length > 0) {
-            let nextChar = expr[i + 1];
-
-            // Condizione per spezzare:
-            // 1. Se il prossimo è una parentesi aperta (es: ...)(...)
-            // 2. Se il carattere corrente è una chiusura di parentesi (es: ...)(...)
-            // 3. Importante: NON spezzare se il prossimo carattere è un esponente ^
-            if (nextChar && nextChar !== '^') {
+        
+        if (balance === 0 && i < expr.length - 1) {
+            let next = expr[i+1];
+            // Non spezzare se il prossimo è '^' (esponente) o operatori di polinomio
+            if (next !== '^' && next !== '+' && next !== '-') {
                 blocks.push(current);
                 current = "";
             }
@@ -74,107 +98,63 @@
     return blocks;
 }
 
-       function areEquivalent(e1, e2) {
-    try {
-        // Traduce l'algebra umana in linguaggio comprensibile al computer
-        const prepare = (str) => {
-            return str
-                .replace(/\)\(/g, ')*(')           // (x+3)(x-3) -> (x+3)*(x-3)
-                .replace(/([a-zA-Z0-9])\(/g, '$1*(') // 3(x) -> 3*(x)
-                .replace(/\)([a-zA-Z0-9])/g, ')*$1') // (x)3 -> (x)*3
-                .replace(/\^/g, '**');             // x^2 -> x**2 (RISOLVE IL PROBLEMA DEI CALCOLI)
-        };
-
-        const p1 = prepare(e1);
-        const p2 = prepare(e2);
-        const vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
-
-        for (let i = 0; i < 3; i++) {
-            let scope = {};
-            vars.forEach(v => scope[v] = Math.random() * 5 + 1);
-            
-            const ev = (expr) => {
-                let s = expr;
-                vars.forEach(v => s = s.replace(new RegExp(v, 'g'), `(${scope[v]})`));
-                return eval(s);
-            };
-
-            // Se la differenza è quasi zero, sono equivalenti
-            if (Math.abs(ev(p1) - ev(p2)) > 0.001) return false;
-        }
-        return true;
-    } catch(e) { 
-        return false; 
-    }
-}
-        
+// 3. GESTIONE BLOCCHI E INTERAZIONE (Deselezione inclusa)
 function addBlock(container, content) {
-            let div = document.createElement('div');
-            div.className = 'block';
-            div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
-            div.dataset.content = content;
-            
-            div.onclick = function() {
-                if (this.classList.contains('simplified')) return;
+    let div = document.createElement('div');
+    div.className = 'block';
+    // Visualizzazione: se c'è ^2 diventa <sup>2</sup>
+    div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
+    div.dataset.content = content;
 
-                // 1. Facciamo il toggle visivo
-                this.classList.toggle('selected');
-
-                // 2. Aggiorniamo l'array selected
-                if (this.classList.contains('selected')) {
-                    selected.push(this);
-                } else {
-                    // Se lo stiamo deselezionando, lo togliamo dall'array
-                    selected = selected.filter(el => el !== this);
-                }
-                
-                // 3. Solo se abbiamo effettivamente 2 blocchi DIVERSI selezionati
-                if (selected.length === 2) {
-                    simplify();
-                }
-            };
-            container.appendChild(div);
+    div.onclick = function() {
+        if (this.classList.contains('simplified')) return;
+        
+        // Toggle selezione: se già presente lo toglie, se assente lo aggiunge
+        this.classList.toggle('selected');
+        if (this.classList.contains('selected')) {
+            selected.push(this);
+        } else {
+            selected = selected.filter(el => el !== this);
         }
+        
+        if (selected.length === 2) {
+            simplify();
+        }
+    };
+    container.appendChild(div);
+}
 
-   function simplify() {
+// 4. LOGICA DI SEMPLIFICAZIONE (Cross-row, rispetta esponenti)
+function simplify() {
     let [a, b] = selected;
-    let c1 = a.dataset.content;
-    let c2 = b.dataset.content;
+    
+    // Impedisci auto-semplificazione sulla stessa riga
+    if (a.parentElement === b.parentElement) {
+        selected.forEach(el => el.classList.remove('selected'));
+        selected = [];
+        return;
+    }
 
-    // 1. Estrazione base ed esponente (rimane identica alla tua logica)
+    let c1 = a.dataset.content, c2 = b.dataset.content;
     let match1 = c1.match(/^(.*?)(?:\^(\d+))?$/);
     let match2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
     
-    let base1 = match1[1];
-    let exp1 = match1[2] ? parseInt(match1[2]) : 1;
-    let base2 = match2[1];
-    let exp2 = match2[2] ? parseInt(match2[2]) : 1;
+    let base1 = match1[1], exp1 = parseInt(match1[2] || 1);
+    let base2 = match2[1], exp2 = parseInt(match2[2] || 1);
 
-    // 2. CONFRONTO INTELLIGENTE: usiamo areEquivalent sulle basi
-    // Questo risolve il problema (x+1) vs x+1 senza rompere il resto
     if (areEquivalent(base1, base2)) {
-        // Se le basi sono uguali (o equivalenti), procediamo come nella tua funzione
         a.classList.add('simplified');
         b.classList.add('simplified');
-        
         let diff = exp1 - exp2;
-        if (diff > 0) {
-            // Se resta qualcosa al numeratore
-            addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
-        } else if (diff < 0) {
-            // Se resta qualcosa al denominatore
-            addBlock(b.parentElement, Math.abs(diff) === 1 ? base2 : `${base2}^${Math.abs(diff)}`);
-        }
-        // Se diff === 0, entrambi spariscono e non aggiungiamo nulla (corretto!)
-    } 
-    // 3. Fallback per blocchi interi (es. se semplifichi 10 con 10 o x^2 con x^2)
-    else if (areEquivalent(c1, c2)) {
-        a.classList.add('simplified');
-        b.classList.add('simplified');
+        
+        // Aggiungi il blocco rimanente nella riga corretta
+        if (diff > 0) addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
+        else if (diff < 0) addBlock(b.parentElement, Math.abs(diff) === 1 ? base2 : `${base2}^${Math.abs(diff)}`);
     } else {
-        alert("Non semplificabili!");
+        alert("Basi non equivalenti!");
     }
-
+    
+    // Reset pulito
     selected.forEach(el => el.classList.remove('selected'));
     selected = [];
 }
