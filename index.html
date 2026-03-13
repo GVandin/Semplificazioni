@@ -138,6 +138,19 @@ function getGCD(a, b) {
             return;
         }
     }
+            // --- LOGICA SPECIALE PER I SEGNI MENO ---
+    if (c1 === "-" && c2 === "-") {
+        // Funziona sia se sono nello stesso parent (es. numeratore) 
+        // sia se sono uno sopra e uno sotto
+        a.classList.add('simplified');
+        b.classList.add('simplified');
+        
+        // Se erano nello stesso lato (es. - * -), potresti voler aggiungere un "+" 
+        // ma in algebra solitamente si lascia vuoto (sottointeso)
+        
+        resetSelection();
+        return;
+    }
 
     // --- LOGICA ALGEBRICA (Invariata) ---
     let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
