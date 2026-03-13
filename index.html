@@ -2,29 +2,29 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Lavagna Algebrica Avanzata</title>
+    <title>Lavagna Algebrica - Logica Robusta</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
         .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .row { display: flex; gap: 15px; min-height: 90px; padding: 15px; align-items: center; flex-wrap: wrap; }
         .line { width: 400px; height: 4px; background: #333; margin: 10px 0; }
-        .block { border: 3px solid #333; padding: 15px; border-radius: 8px; cursor: pointer; background: #fff; font-weight: bold; font-size: 1.6em; }
+        .block { border: 3px solid #333; padding: 15px; border-radius: 8px; cursor: pointer; background: #fff; font-weight: bold; font-size: 1.6em; transition: 0.2s; }
         .selected { border: 4px solid #007bff; background: #e7f1ff; transform: scale(1.05); }
-        .simplified { text-decoration: line-through; opacity: 0.3; }
+        .simplified { text-decoration: line-through; opacity: 0.3; pointer-events: none; }
         sup { font-size: 0.6em; vertical-align: super; }
     </style>
 </head>
 <body>
 
-    <h2>Lavagna Algebrica Avanzata</h2>
+    <h2>Lavagna Algebrica - Logica Robusta</h2>
     <div class="controls">
         <input type="text" id="numInput" placeholder="Numeratore (es: 3x^2(x+3))">
         <input type="text" id="denInput" placeholder="Denominatore (es: x(3+x))">
         <button onclick="generateFraction()">Genera</button>
     </div>
     <div class="controls">
-        <input type="text" id="splitInput" placeholder="Scomponi blocco selezionato">
+        <input type="text" id="splitInput" placeholder="Scomponi blocco">
         <button onclick="decomposeBlock()">Verifica e Scomponi</button>
     </div>
 
@@ -37,29 +37,34 @@
     <script>
         let selected = [];
 
+        // Parser che rispetta la "sacralità" di + e -
         function parseToBlocks(expr) {
             let blocks = [];
             let current = "";
             let balance = 0;
+            let hasPlusMinus = false;
             expr = expr.replace(/\s+/g, '');
 
             for (let i = 0; i < expr.length; i++) {
                 let char = expr[i];
-                current += char;
                 if (char === '(') balance++;
                 if (char === ')') balance--;
-                
-                if (balance === 0 && i < expr.length - 1) {
+                if (char === '+' || char === '-') hasPlusMinus = true;
+
+                current += char;
+
+                // Regola di rottura:
+                // Solo se siamo fuori parentesi, NON abbiamo incontrato un + o -,
+                // e c'è una chiara separazione tra fattori.
+                if (balance === 0 && !hasPlusMinus && i < expr.length - 1) {
                     let next = expr[i+1];
-                    // Regola di rottura: passa da digit a letter, o tra lettere diverse, o parentesi
-                    // MA ignora se è un segno + o -
-                    if (next !== '+' && next !== '-') {
-                        if (/[a-zA-Z0-9]/.test(char) && /[a-zA-Z0-9]/.test(next) && 
-                           ((/\d/.test(char) && /[a-zA-Z]/.test(next)) || (/[a-zA-Z]/.test(char) && /\d/.test(next)) || 
-                           (/[a-zA-Z]/.test(char) && /[a-zA-Z]/.test(next) && char !== next) || next === '(' || char === ')')) {
-                            blocks.push(current);
-                            current = "";
-                        }
+                    // Condizioni per dividere i fattori:
+                    if (next === '(' || 
+                       (/\d/.test(char) && /[a-zA-Z]/.test(next)) || 
+                       (/[a-zA-Z]/.test(char) && /\d/.test(next)) ||
+                       (/[a-zA-Z]/.test(char) && /[a-zA-Z]/.test(next) && char !== next)) {
+                        blocks.push(current);
+                        current = "";
                     }
                 }
             }
@@ -67,13 +72,13 @@
             return blocks.filter(b => b.trim() !== "");
         }
 
-        // Verifica basata su test casuali per ogni incognita rilevata
+        // Verifica basata su 3 valori casuali per ogni incognita
         function areEquivalent(expr1, expr2) {
             try {
                 const vars = [...new Set((expr1 + expr2).match(/[a-z]/g))];
                 for (let i = 0; i < 3; i++) {
                     let scope = {};
-                    vars.forEach(v => scope[v] = Math.floor(Math.random() * 10) + 1);
+                    vars.forEach(v => scope[v] = Math.random() * 5 + 1);
                     const evalE = (e) => {
                         let str = e.replace(/\^/g, '**');
                         vars.forEach(v => str = str.replace(new RegExp(v, 'g'), `(${scope[v]})`));
@@ -100,7 +105,6 @@
 
         function simplify() {
             let [a, b] = selected;
-            // Verifica equivalenza per permettere semplificazione di blocchi diversi (es: x+3 e 3+x)
             if (a.parentElement !== b.parentElement && areEquivalent(a.dataset.content, b.dataset.content)) {
                 a.classList.add('simplified');
                 b.classList.add('simplified');
@@ -122,6 +126,7 @@
                 alert("Scomposizione errata!");
             }
             selected = [];
+            document.getElementById('splitInput').value = '';
         }
 
         function generateFraction() {
