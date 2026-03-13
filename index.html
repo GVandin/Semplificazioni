@@ -37,106 +37,130 @@
     <script>
         let selected = [];
 
-        // Parser che rispetta la "sacralità" di + e -
-        function parseToBlocks(expr) {
-            let blocks = [];
-            let current = "";
-            let balance = 0;
-            let hasPlusMinus = false;
-            expr = expr.replace(/\s+/g, '');
+    // Parser: non spezza mai se c'è un + o un -
+    function parseToBlocks(expr) {
+        let blocks = [];
+        let current = "";
+        let balance = 0;
+        let hasPlusMinus = false;
+        expr = expr.replace(/\s+/g, '');
 
-            for (let i = 0; i < expr.length; i++) {
-                let char = expr[i];
-                if (char === '(') balance++;
-                if (char === ')') balance--;
-                if (char === '+' || char === '-') hasPlusMinus = true;
+        for (let i = 0; i < expr.length; i++) {
+            let char = expr[i];
+            if (char === '(') balance++;
+            if (char === ')') balance--;
+            if (char === '+' || char === '-') hasPlusMinus = true;
 
-                current += char;
+            current += char;
 
-                // Regola di rottura:
-                // Solo se siamo fuori parentesi, NON abbiamo incontrato un + o -,
-                // e c'è una chiara separazione tra fattori.
-                if (balance === 0 && !hasPlusMinus && i < expr.length - 1) {
-                    let next = expr[i+1];
-                    // Condizioni per dividere i fattori:
-                    if (next === '(' || 
-                       (/\d/.test(char) && /[a-zA-Z]/.test(next)) || 
-                       (/[a-zA-Z]/.test(char) && /\d/.test(next)) ||
-                       (/[a-zA-Z]/.test(char) && /[a-zA-Z]/.test(next) && char !== next)) {
-                        blocks.push(current);
-                        current = "";
-                    }
+            // La rottura avviene solo fuori parentesi, senza segno +- e tra moltiplicazioni implicite
+            if (balance === 0 && !hasPlusMinus && i < expr.length - 1) {
+                let next = expr[i + 1];
+                if (next === '(' || 
+                   (/\d/.test(char) && /[a-zA-Z]/.test(next)) || 
+                   (/[a-zA-Z]/.test(char) && /\d/.test(next)) ||
+                   (/[a-zA-Z]/.test(char) && /[a-zA-Z]/.test(next) && char !== next)) {
+                    blocks.push(current);
+                    current = "";
                 }
             }
-            if (current) blocks.push(current);
-            return blocks.filter(b => b.trim() !== "");
         }
+        if (current) blocks.push(current);
+        return blocks.filter(b => b.trim() !== "");
+    }
 
-        // Verifica basata su 3 valori casuali per ogni incognita
-        function areEquivalent(expr1, expr2) {
-            try {
-                const vars = [...new Set((expr1 + expr2).match(/[a-z]/g))];
-                for (let i = 0; i < 3; i++) {
-                    let scope = {};
-                    vars.forEach(v => scope[v] = Math.random() * 5 + 1);
-                    const evalE = (e) => {
-                        let str = e.replace(/\^/g, '**');
-                        vars.forEach(v => str = str.replace(new RegExp(v, 'g'), `(${scope[v]})`));
-                        return eval(str);
-                    };
-                    if (Math.abs(evalE(expr1) - evalE(expr2)) > 0.001) return false;
-                }
-                return true;
-            } catch(e) { return false; }
-        }
-
-        function addBlock(container, content) {
-            const div = document.createElement('div');
-            div.className = 'block';
-            div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
-            div.dataset.content = content;
-            div.onclick = function() {
-                this.classList.toggle('selected');
-                selected.push(this);
-                if (selected.length === 2) simplify();
-            };
-            container.appendChild(div);
-        }
-
-        function simplify() {
-            let [a, b] = selected;
-            if (a.parentElement !== b.parentElement && areEquivalent(a.dataset.content, b.dataset.content)) {
-                a.classList.add('simplified');
-                b.classList.add('simplified');
-            } else {
-                alert("Semplificazione non valida!");
+    // Verifica equivalenza con 3 punti casuali
+    function areEquivalent(expr1, expr2) {
+        try {
+            const vars = [...new Set((expr1 + expr2).match(/[a-z]/g))];
+            for (let i = 0; i < 3; i++) {
+                let scope = {};
+                vars.forEach(v => scope[v] = Math.random() * 5 + 1);
+                const evalE = (e) => {
+                    let str = e.replace(/\^/g, '**');
+                    vars.forEach(v => str = str.replace(new RegExp(v, 'g'), `(${scope[v]})`));
+                    return eval(str);
+                };
+                if (Math.abs(evalE(expr1) - evalE(expr2)) > 0.001) return false;
             }
-            selected.forEach(el => el.classList.remove('selected'));
-            selected = [];
-        }
+            return true;
+        } catch(e) { return false; }
+    }
 
-        function decomposeBlock() {
-            if (selected.length !== 1) return alert("Seleziona un solo blocco!");
-            let target = selected[0];
-            let input = document.getElementById('splitInput').value;
-            if (areEquivalent(target.dataset.content, input)) {
-                parseToBlocks(input).forEach(p => addBlock(target.parentElement, p));
-                target.remove();
-            } else {
-                alert("Scomposizione errata!");
+    // Gestione semplificazione con esponenti
+    function simplify() {
+        let [a, b] = selected;
+        let contentA = a.dataset.content;
+        let contentB = b.dataset.content;
+
+        // Estrazione base ed esponente: gestisce tutto ciò che precede ^n
+        const getBaseExp = (str) => {
+            let match = str.match(/(.+)\^(\d+)$/);
+            return match ? { base: match[1], exp: parseInt(match[2]) } : { base: str, exp: 1 };
+        };
+
+        let dataA = getBaseExp(contentA);
+        let dataB = getBaseExp(contentB);
+
+        // Se le basi sono identiche (anche se sono parentesi complesse), sottrai esponenti
+        if (dataA.base === dataB.base) {
+            let diff = dataA.exp - dataB.exp;
+            a.classList.add('simplified');
+            b.classList.add('simplified');
+
+            if (diff > 0) {
+                let res = diff === 1 ? dataA.base : `${dataA.base}^${diff}`;
+                addBlock(a.parentElement, res);
+            } else if (diff < 0) {
+                let res = Math.abs(diff) === 1 ? dataB.base : `${dataB.base}^${Math.abs(diff)}`;
+                addBlock(b.parentElement, res);
             }
-            selected = [];
-            document.getElementById('splitInput').value = '';
+        } else if (areEquivalent(contentA, contentB)) {
+            a.classList.add('simplified');
+            b.classList.add('simplified');
+        } else {
+            alert("Semplificazione non valida!");
         }
+        selected.forEach(el => el.classList.remove('selected'));
+        selected = [];
+    }
 
-        function generateFraction() {
-            ['numerator', 'denominator'].forEach(id => {
-                const container = document.getElementById(id);
-                container.innerHTML = '';
-                parseToBlocks(document.getElementById(id === 'numerator' ? 'numInput' : 'denInput').value)
-                .forEach(p => addBlock(container, p));
-            });
+    // Aggiunta blocco alla UI
+    function addBlock(container, content) {
+        const div = document.createElement('div');
+        div.className = 'block';
+        div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
+        div.dataset.content = content;
+        div.onclick = function() {
+            this.classList.toggle('selected');
+            selected.push(this);
+            if (selected.length === 2) simplify();
+        };
+        container.appendChild(div);
+    }
+
+    function decomposeBlock() {
+        if (selected.length !== 1) return alert("Seleziona un solo blocco!");
+        let target = selected[0];
+        let input = document.getElementById('splitInput').value;
+        if (areEquivalent(target.dataset.content, input)) {
+            parseToBlocks(input).forEach(p => addBlock(target.parentElement, p));
+            target.remove();
+        } else {
+            alert("Scomposizione errata!");
         }
+        selected = [];
+        document.getElementById('splitInput').value = '';
+    }
+
+    function generateFraction() {
+        ['numerator', 'denominator'].forEach(id => {
+            const container = document.getElementById(id);
+            container.innerHTML = '';
+            parseToBlocks(document.getElementById(id === 'numerator' ? 'numInput' : 'denInput').value)
+            .forEach(p => addBlock(container, p));
+        });
+    }
     </script>
 </body>
 </html>
