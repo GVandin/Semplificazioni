@@ -2,29 +2,35 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Lavagna Algebrica Pro</title>
+    <title>Lavagna Algebrica</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
-        .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .row { display: flex; gap: 8px; min-height: 90px; padding: 15px; align-items: center; flex-wrap: wrap; border: 1px dashed #999; }
-        .line { width: 400px; height: 4px; background: #333; margin: 10px 0; }
+        .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; width: 100%; }
+        .row { display: flex; gap: 8px; min-height: 90px; padding: 15px; align-items: center; flex-wrap: wrap; border: 1px dashed #999; width: 100%; justify-content: center; }
+        .line { width: 100%; max-width: 500px; height: 4px; background: #333; margin: 10px 0; }
         .block { border: 3px solid #333; padding: 12px; border-radius: 8px; cursor: pointer; background: #fff; font-weight: bold; font-size: 1.5em; transition: 0.2s; }
         .selected { border: 4px solid #007bff; background: #e7f1ff; transform: scale(1.05); }
         .simplified { text-decoration: line-through; opacity: 0.3; pointer-events: none; }
         sup { font-size: 0.6em; vertical-align: super; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 5px; }
+        button { padding: 8px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
     </style>
 </head>
 <body>
 
     <h2>Lavagna Algebrica</h2>
+    
     <div class="controls">
-        <input type="text" id="numInput" placeholder="Numeratore">
-        <input type="text" id="denInput" placeholder="Denominatore">
+        <strong>1. Inserisci Frazione:</strong><br><br>
+        <input type="text" id="numInput" placeholder="Numeratore (es: x^2-9)">
+        <input type="text" id="denInput" placeholder="Denominatore (es: x+3)">
         <button onclick="generateFraction()">Genera</button>
     </div>
+
     <div class="controls">
-        <input type="text" id="splitInput" placeholder="Scomponi blocco selezionato">
+        <strong>2. Azioni:</strong> (Seleziona un blocco per scomporlo)<br><br>
+        <input type="text" id="splitInput" placeholder="Scrivi scomposizione...">
         <button onclick="decomposeBlock()">Scomponi</button>
     </div>
 
@@ -37,104 +43,96 @@
     <script>
         let selected = [];
 
-        // Parser corretto: Conta le parentesi da 0 e rileva confini impliciti
+        // --- MOTORE DI PARSING ---
         function parseToBlocks(expr) {
             expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
             if (!expr) return [];
 
-            // 1. Controllo Polinomio corretto
+            // Controllo se è un Polinomio (presenza di + o - fuori dalle parentesi)
             let bal = 0;
-            let isPolynomial = false;
-            
-            // ORA PARTIAMO DA 0, così non ignoriamo la primissima parentesi!
+            let isPoly = false;
             for (let i = 0; i < expr.length; i++) {
                 if (expr[i] === '(') bal++;
-                else if (expr[i] === ')') bal--;
-                
-                // Se c'è un + o - fuori dalle parentesi (che non sia un meno iniziale o dopo un esponente)
-                if (bal === 0 && (expr[i] === '+' || expr[i] === '-')) {
-                    if (i > 0 && expr[i-1] !== '^') {
-                        isPolynomial = true;
-                        break;
-                    }
+                if (expr[i] === ')') bal--;
+                if (bal === 0 && i > 0 && (expr[i] === '+' || (expr[i] === '-' && expr[i-1] !== '^'))) {
+                    isPoly = true;
+                    break;
                 }
             }
 
-            if (isPolynomial) return [expr];
+            // Se è un polinomio (es. x^2-9), restituisco il blocco intero
+            if (isPoly) return [expr];
 
-            // 2. Divisione dei fattori se non è un polinomio
+            // Altrimenti, divido per fattori (moltiplicazioni implicite)
             let blocks = [];
-            let current = "";
-            let balance = 0;
-
+            let start = 0;
+            bal = 0;
             for (let i = 0; i < expr.length; i++) {
-                let char = expr[i];
+                if (expr[i] === '(') bal++;
+                if (expr[i] === ')') bal--;
                 
-                if (char === '(') balance++;
-                else if (char === ')') balance--;
-                
-                current += char;
+                if (bal === 0 && i < expr.length - 1) {
+                    let curr = expr[i];
+                    let next = expr[i+1];
+                    let split = false;
 
-                if (balance === 0 && i < expr.length - 1) {
-                    let nextChar = expr[i + 1];
-                    let lastChar = current[current.length - 1];
+                    if (next === '^') split = false; // Non spezzare prima dell'esponente
+                    else if (curr === ')') split = true; // Spezza dopo chiusura parentesi
+                    else if (next === '(') split = true; // Spezza prima di apertura parentesi
+                    else if (/[0-9]/.test(curr) && /[a-zA-Z]/.test(next)) split = true; // Numero-Lettera (2x)
+                    else if (/[a-zA-Z]/.test(curr) && /[a-zA-Z]/.test(next)) split = true; // Lettera-Lettera (xy)
+                    else if (/[a-zA-Z]/.test(curr) && /[0-9]/.test(next)) split = true; // Lettera-Numero (x2)
 
-                    let isBoundary = false;
-                    if (nextChar !== '^' && lastChar !== '^') {
-                        if (lastChar === ')' || nextChar === '(') {
-                            isBoundary = true; 
-                        } else if (/[a-zA-Z]/.test(lastChar) && /[a-zA-Z]/.test(nextChar)) {
-                            isBoundary = true; 
-                        } else if (/\d/.test(lastChar) && /[a-zA-Z]/.test(nextChar)) {
-                            isBoundary = true; 
-                        } else if (/[a-zA-Z]/.test(lastChar) && /\d/.test(nextChar)) {
-                            isBoundary = true; 
-                        }
-                    }
-
-                    if (isBoundary) {
-                        blocks.push(current);
-                        current = "";
+                    if (split) {
+                        blocks.push(expr.substring(start, i + 1));
+                        start = i + 1;
                     }
                 }
             }
-            if (current) blocks.push(current);
+            blocks.push(expr.substring(start));
             return blocks;
         }
 
+        // --- MOTORE DI VERIFICA MATEMATICA ---
         function areEquivalent(e1, e2) {
             if (!e1 || !e2) return false;
             try {
                 const prepare = (str) => {
-                    let wrapped = "(" + str + ")";
-                    return wrapped
+                    return ("(" + str + ")")
                         .replace(/\^/g, '**')
-                        .replace(/\)\(/g, ')*(')
-                        .replace(/([a-zA-Z0-9])\(/g, '$1*(')
-                        .replace(/\)([a-zA-Z0-9])/g, ')*$1');
+                        .replace(/(\d)([a-zA-Z\(])/g, '$1*$2') // 2x o 2(
+                        .replace(/([a-zA-Z\)])(\()/g, '$1*$2') // x( o )(
+                        .replace(/(\))([a-zA-Z0-9])/g, '$1*$2'); // )x o )2
                 };
-
-                const p1 = prepare(e1);
-                const p2 = prepare(e2);
-                
+                const p1 = prepare(e1), p2 = prepare(e2);
                 const vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
-
                 for (let i = 0; i < 3; i++) {
                     let scope = {};
                     vars.forEach(v => scope[v] = Math.random() * 5 + 1);
-                    
                     const ev = (expr) => {
                         let s = expr;
                         vars.forEach(v => s = s.replace(new RegExp(v, 'g'), `(${scope[v]})`));
                         return eval(s);
                     };
-
-                    if (Math.abs(ev(p1) - ev(p2)) > 0.1) return false;
+                    if (Math.abs(ev(p1) - ev(p2)) > 0.01) return false;
                 }
                 return true;
-            } catch(e) {
-                return false;
-            }
+            } catch(e) { return false; }
+        }
+
+        // --- GESTIONE INTERFACCIA ---
+        function generateFraction() {
+            const nVal = document.getElementById('numInput').value;
+            const dVal = document.getElementById('denInput').value;
+            
+            const nCont = document.getElementById('numerator');
+            const dCont = document.getElementById('denominator');
+            
+            nCont.innerHTML = '';
+            dCont.innerHTML = '';
+            
+            parseToBlocks(nVal).forEach(b => addBlock(nCont, b));
+            parseToBlocks(dVal).forEach(b => addBlock(dCont, b));
         }
 
         function addBlock(container, content) {
@@ -142,69 +140,54 @@
             div.className = 'block';
             div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
             div.dataset.content = content;
-
             div.onclick = function() {
                 if (this.classList.contains('simplified')) return;
-
-                if (this.classList.contains('selected')) {
-                    this.classList.remove('selected');
-                    selected = selected.filter(el => el !== this);
-                    return; 
-                }
-
-                this.classList.add('selected');
-                selected.push(this);
-                
-                if (selected.length === 2) {
-                    simplify();
-                }
+                this.classList.toggle('selected');
+                if (this.classList.contains('selected')) selected.push(this);
+                else selected = selected.filter(el => el !== this);
+                if (selected.length === 2) simplify();
             };
             container.appendChild(div);
         }
 
         function simplify() {
             let [a, b] = selected;
-            
             if (a.parentElement.id === b.parentElement.id) {
-                alert("Puoi semplificare solo tra numeratore e denominatore!");
-                selected.forEach(el => el.classList.remove('selected'));
-                selected = [];
-                return;
-            }
+                alert("Semplifica tra sopra e sotto!");
+            } else {
+                let c1 = a.dataset.content, c2 = b.dataset.content;
+                let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
+                let base1 = m1[1], exp1 = parseInt(m1[2] || 1);
+                let base2 = m2[1], exp2 = parseInt(m2[2] || 1);
 
-            let c1 = a.dataset.content;
-            let c2 = b.dataset.content;
-
-            let match1 = c1.match(/^(.*?)(?:\^(\d+))?$/);
-            let match2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
-            
-            let base1 = match1[1];
-            let exp1 = match1[2] ? parseInt(match1[2]) : 1;
-            let base2 = match2[1];
-            let exp2 = match2[2] ? parseInt(match2[2]) : 1;
-
-            if (areEquivalent(base1, base2)) {
-                a.classList.add('simplified');
-                b.classList.add('simplified');
-                
-                let diff = exp1 - exp2;
-                if (diff > 0) {
-                    addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
-                } else if (diff < 0) {
-                    addBlock(b.parentElement, Math.abs(diff) === 1 ? base2 : `${base2}^${Math.abs(diff)}`);
+                if (areEquivalent(base1, base2)) {
+                    a.classList.add('simplified');
+                    b.classList.add('simplified');
+                    let diff = exp1 - exp2;
+                    if (diff > 0) addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
+                    else if (diff < 0) addBlock(b.parentElement, Math.abs(diff) === 1 ? base2 : `${base2}^${Math.abs(diff)}`);
+                } else {
+                    alert("Basi diverse!");
                 }
-            } 
-            else {
-                alert("Basi non equivalenti!");
             }
-
-            a.classList.remove('selected');
-            b.classList.remove('selected');
             selected.forEach(el => el.classList.remove('selected'));
             selected = [];
         }
 
         function decomposeBlock() {
-            if (selected.length !== 1) return alert("Seleziona 1 blocco!");
+            if (selected.length !== 1) return alert("Seleziona un solo blocco da scomporre!");
             let target = selected[0];
-            let input = document.getElementById('splitInput').
+            let formula = document.getElementById('splitInput').value;
+            
+            if (areEquivalent(target.dataset.content, formula)) {
+                parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
+                target.remove();
+                document.getElementById('splitInput').value = '';
+            } else {
+                alert("Scomposizione non valida!");
+            }
+            selected = [];
+        }
+    </script>
+</body>
+</html>
