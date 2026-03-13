@@ -17,7 +17,7 @@
 </head>
 <body>
 
-    <h2>Lavagna Algebrica 1</h2>
+    <h2>Lavagna Algebrica</h2>
     <div class="controls">
         <input type="text" id="numInput" placeholder="Numeratore">
         <input type="text" id="denInput" placeholder="Denominatore">
@@ -80,22 +80,6 @@
             // Tagliamo SOLO SE il prossimo carattere NON è un esponente (^)
             // E siamo al confine di una parentesi (es: "...)" oppure il prossimo è "(" )
             if (nextChar !== '^' && (lastChar === ')' || nextChar === '(')) {
-                blocks.push(current);
-                current = "";
-            }
-            if (balance === 0 && i < expr.length - 1) {
-            let nextChar = expr[i + 1];
-            
-            // Definiamo una giunzione: 
-            // 1. Tra due parentesi ) (
-            // 2. Tra un monomio e una parentesi x(
-            // 3. Tra una parentesi e un monomio )x
-            let isJunction = (char === ')' && nextChar === '(') || 
-                             (/[a-zA-Z0-9]/.test(char) && nextChar === '(') ||
-                             (char === ')' && /[a-zA-Z0-9]/.test(nextChar));
-
-            // Spezziamo SOLO se è una giunzione E il prossimo non è un esponente
-            if (isJunction && nextChar !== '^') {
                 blocks.push(current);
                 current = "";
             }
