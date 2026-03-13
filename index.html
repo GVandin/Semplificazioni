@@ -125,33 +125,64 @@
         selected = [];
     }
 
-    // Aggiunta blocco alla UI
-    function addBlock(container, content) {
-        const div = document.createElement('div');
-        div.className = 'block';
-        div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
-        div.dataset.content = content;
-        div.onclick = function() {
-            this.classList.toggle('selected');
-            selected.push(this);
-            if (selected.length === 2) simplify();
-        };
-        container.appendChild(div);
-    }
+    // Gestione selezione intelligente
+        function addBlock(container, content) {
+            const div = document.createElement('div');
+            div.className = 'block';
+            div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
+            div.dataset.content = content;
+            
+            div.onclick = function(e) {
+                if (this.classList.contains('simplified')) return;
+                
+                // Toggle selezione
+                this.classList.toggle('selected');
+                
+                if (this.classList.contains('selected')) {
+                    selected.push(this);
+                } else {
+                    selected = selected.filter(el => el !== this);
+                }
 
-    function decomposeBlock() {
-        if (selected.length !== 1) return alert("Seleziona un solo blocco!");
-        let target = selected[0];
-        let input = document.getElementById('splitInput').value;
-        if (areEquivalent(target.dataset.content, input)) {
-            parseToBlocks(input).forEach(p => addBlock(target.parentElement, p));
-            target.remove();
-        } else {
-            alert("Scomposizione errata!");
+                // Esegui semplificazione solo se sono 2 blocchi DIVERSI
+                if (selected.length === 2) {
+                    if (selected[0] !== selected[1]) {
+                        simplify();
+                    } else {
+                        // Se clicca lo stesso blocco due volte, deseleziona tutto
+                        this.classList.remove('selected');
+                        selected = [];
+                    }
+                }
+            };
+            container.appendChild(div);
         }
-        selected = [];
-        document.getElementById('splitInput').value = '';
-    }
+
+    // Scomposizione corretta
+        function decomposeBlock() {
+            if (selected.length !== 1) return alert("Seleziona esattamente un blocco!");
+            let target = selected[0];
+            let input = document.getElementById('splitInput').value;
+            
+            // Verifica matematica: il blocco originale deve essere equivalente alla scomposizione
+            if (areEquivalent(target.dataset.content, input)) {
+                // Scomponiamo l'input inserito dall'utente in fattori
+                // Usiamo un piccolo trick: rimuoviamo le parentesi esterne se presenti
+                let cleanInput = input.replace(/^\((.*)\)$/, '$1');
+                
+                // Questa funzione divide (x+3)(x-3) in [x+3, x-3]
+                let parts = cleanInput.match(/\([^\)]+\)|[a-zA-Z0-9^]+/g);
+                
+                parts.forEach(p => addBlock(target.parentElement, p));
+                target.remove();
+            } else {
+                alert("Errore: la scomposizione non è equivalente al blocco selezionato!");
+            }
+            // Reset
+            selected.forEach(el => el.classList.remove('selected'));
+            selected = [];
+            document.getElementById('splitInput').value = '';
+        }
 
     function generateFraction() {
         ['numerator', 'denominator'].forEach(id => {
