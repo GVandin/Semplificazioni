@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Lavagna Algebrica</title>
+    <title>Lavagna Algebrica Pro</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
         .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -37,33 +37,35 @@
     <script>
         let selected = [];
 
-        // Parser a giunzioni esplicite e implicite
+        // Parser corretto: Conta le parentesi da 0 e rileva confini impliciti
         function parseToBlocks(expr) {
-            // Rimuovo spazi e asterischi (se inseriti) per gestire tutto come moltiplicazioni implicite
             expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
             if (!expr) return [];
 
-            // 1. Controllo Polinomio: se c'è un + o - al livello principale, è un blocco UNICO.
-            let balance = 0;
+            // 1. Controllo Polinomio corretto
+            let bal = 0;
             let isPolynomial = false;
-            // Partiamo da 1 per tollerare un eventuale segno meno all'inizio (es: -x^2)
-            for (let i = 1; i < expr.length; i++) {
-                if (expr[i] === '(') balance++;
-                else if (expr[i] === ')') balance--;
+            
+            // ORA PARTIAMO DA 0, così non ignoriamo la primissima parentesi!
+            for (let i = 0; i < expr.length; i++) {
+                if (expr[i] === '(') bal++;
+                else if (expr[i] === ')') bal--;
                 
-                if (balance === 0 && (expr[i] === '+' || expr[i] === '-')) {
-                    isPolynomial = true;
-                    break;
+                // Se c'è un + o - fuori dalle parentesi (che non sia un meno iniziale o dopo un esponente)
+                if (bal === 0 && (expr[i] === '+' || expr[i] === '-')) {
+                    if (i > 0 && expr[i-1] !== '^') {
+                        isPolynomial = true;
+                        break;
+                    }
                 }
             }
 
-            // Se è un polinomio (es. x^2-9), restituisci l'intero blocco intatto!
             if (isPolynomial) return [expr];
 
-            // 2. Se è una moltiplicazione, estraiamo i singoli fattori
+            // 2. Divisione dei fattori se non è un polinomio
             let blocks = [];
             let current = "";
-            balance = 0;
+            let balance = 0;
 
             for (let i = 0; i < expr.length; i++) {
                 let char = expr[i];
@@ -73,23 +75,20 @@
                 
                 current += char;
 
-                // Condizione di taglio: siamo a livello 0 (fuori parentesi) e non siamo all'ultimo carattere
                 if (balance === 0 && i < expr.length - 1) {
                     let nextChar = expr[i + 1];
                     let lastChar = current[current.length - 1];
 
-                    // Tagliamo SOLO SE né il corrente né il prossimo sono un esponente (^)
                     let isBoundary = false;
                     if (nextChar !== '^' && lastChar !== '^') {
-                        // Riconoscimento moltiplicazioni:
                         if (lastChar === ')' || nextChar === '(') {
-                            isBoundary = true; // Confini di parentesi: )x oppure x( oppure )(
+                            isBoundary = true; 
                         } else if (/[a-zA-Z]/.test(lastChar) && /[a-zA-Z]/.test(nextChar)) {
-                            isBoundary = true; // Lettera e Lettera: xy
+                            isBoundary = true; 
                         } else if (/\d/.test(lastChar) && /[a-zA-Z]/.test(nextChar)) {
-                            isBoundary = true; // Numero e Lettera: 2x
+                            isBoundary = true; 
                         } else if (/[a-zA-Z]/.test(lastChar) && /\d/.test(nextChar)) {
-                            isBoundary = true; // Lettera e Numero (es. se scrivono x2)
+                            isBoundary = true; 
                         }
                     }
 
@@ -208,24 +207,4 @@
         function decomposeBlock() {
             if (selected.length !== 1) return alert("Seleziona 1 blocco!");
             let target = selected[0];
-            let input = document.getElementById('splitInput').value;
-            if (areEquivalent(target.dataset.content, input)) {
-                parseToBlocks(input).forEach(p => addBlock(target.parentElement, p));
-                target.remove();
-            } else {
-                alert("Scomposizione errata!");
-            }
-            selected = [];
-        }
-
-        function generateFraction() {
-            ['numerator', 'denominator'].forEach(id => {
-                const container = document.getElementById(id);
-                container.innerHTML = '';
-                parseToBlocks(document.getElementById(id === 'numerator' ? 'numInput' : 'denInput').value)
-                .forEach(p => addBlock(container, p));
-            });
-        }
-    </script>
-</body>
-</html>
+            let input = document.getElementById('splitInput').
