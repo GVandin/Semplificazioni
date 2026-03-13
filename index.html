@@ -38,57 +38,77 @@
         let selected = [];
 
         // Parser a giunzioni esplicite
-        function parseToBlocks(expr) {
-            expr = expr.replace(/\s+/g, '');
-            let blocks = [];
-            let current = "";
-            let balance = 0;
-            let normalized = expr
-        .replace(/\)\(/g, ')|(')
-        .replace(/([a-zA-Z0-9])\(/g, '$1|(')
-        .replace(/\)([a-zA-Z0-9])/g, ')|$1');
+       function parseToBlocks(expr) {
+    expr = expr.replace(/\s+/g, '');
+    if (!expr) return [];
 
-    // 2. Protezione esponenti: se c'è un ^, non spezzare mai tra la base e l'esponente
-    // (Il parser attuale non lo fa, ma verifichiamo che il "|" non finisca tra base e ^)
-    
-    // 3. Split finale
-    return normalized.split('|').filter(b => b.trim() !== "");
-
-            for (let i = 0; i < expr.length; i++) {
-                let char = expr[i];
-                let isClosing = char === ')';
-                let isOpening = char === '(';
-                let isAlphaNum = /[a-zA-Z0-9^]/.test(char);
-
-                // Punto di rottura: siamo fuori parentesi e c'è una giunzione
-                if (balance === 0 && current !== "" && (isOpening || (isAlphaNum && expr[i-1] === ')'))) {
-                    blocks.push(current);
-                    current = "";
-                }
-
-                if (isOpening) balance++;
-                else if (isClosing) balance--;
-                current += char;
-            }
-            if (current) blocks.push(current);
-            return blocks;
+    // 1. Controllo Polinomio: se c'è un + o - al livello principale, è un blocco UNICO.
+    let balance = 0;
+    let isPolynomial = false;
+    // Partiamo da 1 per tollerare un eventuale segno meno all'inizio (es: -x^2)
+    for (let i = 1; i < expr.length; i++) {
+        if (expr[i] === '(') balance++;
+        else if (expr[i] === ')') balance--;
+        
+        if (balance === 0 && (expr[i] === '+' || expr[i] === '-')) {
+            isPolynomial = true;
+            break;
         }
+    }
 
-        function areEquivalent(e1, e2) {
+    // Se è un polinomio (es. x^2-9), restituisci l'intero blocco intatto!
+    if (isPolynomial) return [expr];
+
+    // 2. Se è una moltiplicazione, estraiamo i singoli fattori
+    let blocks = [];
+    let current = "";
+    balance = 0;
+
+    for (let i = 0; i < expr.length; i++) {
+        let char = expr[i];
+        
+        if (char === '(') balance++;
+        else if (char === ')') balance--;
+        
+        current += char;
+
+        // Condizione di taglio: siamo a livello 0 (fuori parentesi) e non siamo all'ultimo carattere
+        if (balance === 0 && i < expr.length - 1) {
+            let nextChar = expr[i + 1];
+            let lastChar = current[current.length - 1];
+
+            // Tagliamo SOLO SE il prossimo carattere NON è un esponente (^)
+            // E siamo al confine di una parentesi (es: "...)" oppure il prossimo è "(" )
+            if (nextChar !== '^' && (lastChar === ')' || nextChar === '(')) {
+                blocks.push(current);
+                current = "";
+            }
+        }
+    }
+    if (current) blocks.push(current);
+    return blocks;
+}
+
+      function areEquivalent(e1, e2) {
+    if (!e1 || !e2) return false;
     try {
-        // Funzione per trasformare la notazione algebrica umana in notazione JavaScript
         const prepare = (str) => {
-            return str
-                .replace(/\)\(/g, ')*(') // Trasforma )( in )*(
-                .replace(/([a-zA-Z0-9])\(/g, '$1*(') // Trasforma x( in x*(
-                .replace(/\)([a-zA-Z0-9])/g, ')*$1') // Trasforma )x in )*x
-                .replace(/\^/g, '**'); // Trasforma ^ in ** per JS
+            // Applichiamo la tua idea: ogni blocco è trattato come se fosse tra parentesi
+            let wrapped = "(" + str + ")";
+            return wrapped
+                .replace(/\^/g, '**')
+                .replace(/\)\(/g, ')*(')
+                .replace(/([a-zA-Z0-9])\(/g, '$1*(')
+                .replace(/\)([a-zA-Z0-9])/g, ')*$1');
         };
 
-        const vars = [...new Set((e1 + e2).match(/[a-z]/gi))];
         const p1 = prepare(e1);
         const p2 = prepare(e2);
+        
+        // Estraiamo le variabili (es: x, y, a)
+        const vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
 
+        // Test numerico su 3 campioni casuali
         for (let i = 0; i < 3; i++) {
             let scope = {};
             vars.forEach(v => scope[v] = Math.random() * 5 + 1);
@@ -102,9 +122,8 @@
             if (Math.abs(ev(p1) - ev(p2)) > 0.001) return false;
         }
         return true;
-    } catch(e) { 
-        console.error("Errore di calcolo:", e);
-        return false; 
+    } catch(e) {
+        return false;
     }
 }
 
@@ -129,58 +148,45 @@
 
         function simplify() {
     let [a, b] = selected;
+    
+    // CONTROLLO DI SICUREZZA: devono essere in righe diverse
+    if (a.parentElement.id === b.parentElement.id) {
+        alert("Puoi semplificare solo tra numeratore e denominatore!");
+        selected.forEach(el => el.classList.remove('selected'));
+        selected = [];
+        return;
+    }
+
     let c1 = a.dataset.content;
     let c2 = b.dataset.content;
 
-    // 1. Funzione per estrarre la base e l'esponente da un blocco
-    function getBaseAndExp(expr) {
-        // Cerca un esponente finale (es: ^2). Se non c'è, l'esponente è 1.
-        let match = expr.match(/^(.*?)(?:\^(\d+))?$/);
-        let base = match[1];
-        let exp = match[2] ? parseInt(match[2]) : 1;
-        return { base, exp };
-    }
+    // Estrazione base ed esponente
+    let match1 = c1.match(/^(.*?)(?:\^(\d+))?$/);
+    let match2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
+    
+    let base1 = match1[1];
+    let exp1 = match1[2] ? parseInt(match1[2]) : 1;
+    let base2 = match2[1];
+    let exp2 = match2[2] ? parseInt(match2[2]) : 1;
 
-    let obj1 = getBaseAndExp(c1);
-    let obj2 = getBaseAndExp(c2);
-
-    // 2. Controlliamo se le BASI sono equivalenti (così (x+1) e x+1 risultano uguali!)
-    if (areEquivalent(obj1.base, obj2.base)) {
-        
-        // Troviamo l'esponente minore per sottrarlo a entrambi
-        let minExp = Math.min(obj1.exp, obj2.exp);
-        let newExp1 = obj1.exp - minExp;
-        let newExp2 = obj2.exp - minExp;
-
-        // Aggiorniamo il primo blocco
-        if (newExp1 === 0) {
-            a.classList.add('simplified');
-        } else {
-            // Se resta esponente 1, togliamo il ^, altrimenti lo rimettiamo
-            let newContent = newExp1 === 1 ? obj1.base : `${obj1.base}^${newExp1}`;
-            a.dataset.content = newContent;
-            a.innerHTML = newContent.replace(/\^(\d+)/g, '<sup>$1</sup>');
-        }
-
-        // Aggiorniamo il secondo blocco
-        if (newExp2 === 0) {
-            b.classList.add('simplified');
-        } else {
-            let newContent = newExp2 === 1 ? obj2.base : `${obj2.base}^${newExp2}`;
-            b.dataset.content = newContent;
-            b.innerHTML = newContent.replace(/\^(\d+)/g, '<sup>$1</sup>');
-        }
-
-    } 
-    // 3. Fallback: se non sono potenze ma interi blocchi equivalenti numericamente
-    else if (areEquivalent(c1, c2)) {
+    // Confronto basi con la logica delle parentesi virtuali
+    if (areEquivalent(base1, base2)) {
         a.classList.add('simplified');
         b.classList.add('simplified');
-    } else {
-        alert("Non semplificabili!");
+        
+        let diff = exp1 - exp2;
+        if (diff > 0) {
+            // Se vince il primo blocco (a), aggiungiamo il resto nella sua riga
+            addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
+        } else if (diff < 0) {
+            // Se vince il secondo blocco (b), aggiungiamo il resto nella sua riga
+            addBlock(b.parentElement, Math.abs(diff) === 1 ? base2 : `${base2}^${Math.abs(diff)}`);
+        }
+    } 
+    else {
+        alert("Basi non equivalenti!");
     }
-    
-    // Reset della selezione
+
     selected.forEach(el => el.classList.remove('selected'));
     selected = [];
 }
