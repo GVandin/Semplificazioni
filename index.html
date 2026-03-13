@@ -128,23 +128,33 @@
 }
 
         function addBlock(container, content) {
-            let div = document.createElement('div');
-            div.className = 'block';
-            div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
-            div.dataset.content = content;
-            div.onclick = function() {
-                if (this.classList.contains('simplified')) return;
-                this.classList.toggle('selected');
-                if (this.classList.contains('selected')) selected.push(this);
-                else selected = selected.filter(el => el !== this);
-                
-                if (selected.length === 2) {
-                    if (selected[0] !== selected[1]) simplify();
-                    else { this.classList.remove('selected'); selected = []; }
-                }
-            };
-            container.appendChild(div);
+    let div = document.createElement('div');
+    div.className = 'block';
+    div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
+    div.dataset.content = content;
+
+    div.onclick = function() {
+        // Se è già semplificato, non fare nulla
+        if (this.classList.contains('simplified')) return;
+
+        // Caso 1: Il blocco è già selezionato -> lo deselezioniamo
+        if (this.classList.contains('selected')) {
+            this.classList.remove('selected');
+            selected = selected.filter(el => el !== this);
+            return; // Interrompiamo qui, non deve succedere "niente altro"
         }
+
+        // Caso 2: Il blocco non è selezionato -> lo aggiungiamo
+        this.classList.add('selected');
+        selected.push(this);
+        
+        // Solo quando arriviamo a 2 blocchi diversi parte la semplificazione
+        if (selected.length === 2) {
+            simplify();
+        }
+    };
+    container.appendChild(div);
+}
 
         function simplify() {
     let [a, b] = selected;
@@ -187,6 +197,9 @@
         alert("Basi non equivalenti!");
     }
 
+            // ALLA FINE: Puliamo sempre tutto, a prescindere dal risultato
+    a.classList.remove('selected');
+    b.classList.remove('selected');
     selected.forEach(el => el.classList.remove('selected'));
     selected = [];
 }
