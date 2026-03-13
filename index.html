@@ -49,12 +49,14 @@
             if (!expr) return [];
 
             let blocks = [];
-    
-            // 1. Isoliamo il segno meno iniziale se presente
-            if (expr.startsWith('-')) {
-                blocks.push("-");
-                expr = expr.substring(1);
-            }
+        // 1. Estrazione immediata del segno meno iniziale (se presente)
+        if (expr.startsWith('-')) {
+            blocks.push("-");
+            expr = expr.substring(1);
+        }
+
+        // Se dopo aver tolto il meno l'espressione è vuota, abbiamo finito
+        if (!expr) return blocks;
 
             // Controllo se è un Polinomio (presenza di + o - fuori dalle parentesi)
             let bal = 0;
