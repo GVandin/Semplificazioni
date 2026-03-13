@@ -37,37 +37,54 @@
     <script>
         let selected = [];
 
-    // Parser: non spezza mai se c'è un + o un -
-    function parseToBlocks(expr) {
-        let blocks = [];
-        let current = "";
-        let balance = 0;
-        let hasPlusMinus = false;
-        expr = expr.replace(/\s+/g, '');
+   function parseToBlocks(expr) {
+    let blocks = [];
+    let current = "";
+    let balance = 0;
+    
+    // Rimuoviamo gli spazi
+    expr = expr.replace(/\s+/g, '');
+    
+    for (let i = 0; i < expr.length; i++) {
+        let char = expr[i];
+        
+        if (char === '(') balance++;
+        if (char === ')') balance--;
+        
+        current += char;
+        
+        // La logica di rottura:
+        // Spezziamo solo se siamo a "livello 0" (fuori parentesi) 
+        // e incontriamo una moltiplicazione implicita o esplicita 
+        // che NON è preceduta o seguita da + o -
+        
+        if (balance === 0) {
+            let next = expr[i + 1];
+            
+            // Regola: Spezziamo tra due fattori (es: x e (x+3))
+            // MA solo se non siamo dentro un polinomio (es: x+3 non si spezza)
+            let isMonomialBoundary = (
+                (/[a-zA-Z0-9]/.test(char) && next === '(') || // x(
+                (char === ')' && /[a-zA-Z0-9]/.test(next)) || // )( o )x
+                (char === ')' && next === '(')                // )(
+            );
 
-        for (let i = 0; i < expr.length; i++) {
-            let char = expr[i];
-            if (char === '(') balance++;
-            if (char === ')') balance--;
-            if (char === '+' || char === '-') hasPlusMinus = true;
+            // ECCEZIONE DI PROTEZIONE:
+            // Non spezzare mai se il blocco che stiamo formando contiene + o -
+            if (/[+\-]/.test(current)) {
+                // Se contiene + o -, non spezziamo mai fino alla fine
+                continue; 
+            }
 
-            current += char;
-
-            // La rottura avviene solo fuori parentesi, senza segno +- e tra moltiplicazioni implicite
-            if (balance === 0 && !hasPlusMinus && i < expr.length - 1) {
-                let next = expr[i + 1];
-                if (next === '(' || 
-                   (/\d/.test(char) && /[a-zA-Z]/.test(next)) || 
-                   (/[a-zA-Z]/.test(char) && /\d/.test(next)) ||
-                   (/[a-zA-Z]/.test(char) && /[a-zA-Z]/.test(next) && char !== next)) {
-                    blocks.push(current);
-                    current = "";
-                }
+            if (isMonomialBoundary) {
+                blocks.push(current);
+                current = "";
             }
         }
-        if (current) blocks.push(current);
-        return blocks.filter(b => b.trim() !== "");
     }
+    if (current) blocks.push(current);
+    return blocks.filter(b => b.trim() !== "");
+}
 
     // Verifica equivalenza con 3 punti casuali
     function areEquivalent(expr1, expr2) {
