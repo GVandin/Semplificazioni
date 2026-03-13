@@ -38,52 +38,57 @@
         let selected = [];
 
    function parseToBlocks(expr) {
-    let blocks = [];
-    let current = "";
-    let balance = 0;
-    
-    // Rimuoviamo gli spazi
+    // 1. Pulizia e normalizzazione
     expr = expr.replace(/\s+/g, '');
-    
-    for (let i = 0; i < expr.length; i++) {
-        let char = expr[i];
-        
-        if (char === '(') balance++;
-        if (char === ')') balance--;
-        
-        current += char;
-        
-        // La logica di rottura:
-        // Spezziamo solo se siamo a "livello 0" (fuori parentesi) 
-        // e incontriamo una moltiplicazione implicita o esplicita 
-        // che NON è preceduta o seguita da + o -
-        
-        if (balance === 0) {
-            let next = expr[i + 1];
-            
-            // Regola: Spezziamo tra due fattori (es: x e (x+3))
-            // MA solo se non siamo dentro un polinomio (es: x+3 non si spezza)
-            let isMonomialBoundary = (
-                (/[a-zA-Z0-9]/.test(char) && next === '(') || // x(
-                (char === ')' && /[a-zA-Z0-9]/.test(next)) || // )( o )x
-                (char === ')' && next === '(')                // )(
-            );
+    let pos = 0;
 
-            // ECCEZIONE DI PROTEZIONE:
-            // Non spezzare mai se il blocco che stiamo formando contiene + o -
-            if (/[+\-]/.test(current)) {
-                // Se contiene + o -, non spezziamo mai fino alla fine
-                continue; 
-            }
+    function parseExpression() {
+        let blocks = [];
+        let current = "";
+        let balance = 0;
 
-            if (isMonomialBoundary) {
-                blocks.push(current);
+        while (pos < expr.length) {
+            let char = expr[pos];
+
+            if (char === '(') balance++;
+            else if (char === ')') balance--;
+
+            // Se siamo al livello base e incontriamo un + o -
+            // spezziamo SOLO se il blocco precedente non è vuoto
+            if (balance === 0 && (char === '+' || char === '-')) {
+                if (current) blocks.push(current);
+                blocks.push(char); // Il segno è un blocco a sé
                 current = "";
+                pos++;
+            } 
+            // Se incontriamo una moltiplicazione implicita (es: x(x+3) o 3x)
+            // spezziamo solo se siamo a livello 0
+            else if (balance === 0 && isMultiplicationBoundary(expr, pos)) {
+                if (current) blocks.push(current);
+                current = "";
+                // Non incrementiamo pos, la moltiplicazione si gestisce nel ciclo
+                pos++; 
+            }
+            else {
+                current += char;
+                pos++;
             }
         }
+        if (current) blocks.push(current);
+        return blocks;
     }
-    if (current) blocks.push(current);
-    return blocks.filter(b => b.trim() !== "");
+
+    function isMultiplicationBoundary(e, p) {
+        // Regole per capire se c'è un blocco moltiplicativo
+        let prev = e[p - 1];
+        let curr = e[p];
+        // Es: ) ( , x (, 3 x
+        return (prev === ')' && curr === '(') || 
+               (/[a-zA-Z0-9]/.test(prev) && curr === '(') ||
+               (/\d/.test(prev) && /[a-zA-Z]/.test(curr));
+    }
+
+    return parseExpression().filter(b => b !== "");
 }
 
     // Verifica equivalenza con 3 punti casuali
