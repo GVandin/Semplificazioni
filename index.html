@@ -9,12 +9,24 @@
         .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; width: 100%; }
         .row { display: flex; gap: 8px; min-height: 90px; padding: 15px; align-items: center; flex-wrap: wrap; border: 1px dashed #999; width: 100%; justify-content: center; }
         .line { width: 100%; max-width: 500px; height: 4px; background: #333; margin: 10px 0; }
-        .block { border: 3px solid #333; padding: 12px; border-radius: 8px; cursor: pointer; background: #fff; font-weight: bold; font-size: 1.5em; transition: 0.2s; }
+        .block { border: 3px solid #333; padding: 12px; border-radius: 8px; cursor: pointer; background: #fff; font-weight: bold; font-size: 1.5em; transition: 0.2s; user-select: none; }
         .selected { border: 4px solid #007bff; background: #e7f1ff; transform: scale(1.05); }
         .simplified { text-decoration: line-through; opacity: 0.3; pointer-events: none; }
         sup { font-size: 0.6em; vertical-align: super; }
         input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 5px; }
         button { padding: 8px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        
+        /* --- NUOVE ANIMAZIONI PER ERRORI --- */
+        @keyframes flashError {
+            0%, 100% { border-color: #333; background: #fff; transform: scale(1); }
+            50% { border-color: #dc3545; background: #f8d7da; color: #dc3545; transform: scale(1.05); }
+        }
+        .error-flash {
+            animation: flashError 0.4s ease-in-out 2; /* Lampeggia 2 volte */
+            border-color: #dc3545 !important;
+            background: #f8d7da !important;
+            color: #dc3545 !important;
+        }
     </style>
 </head>
 <body>
@@ -48,7 +60,32 @@
             expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
             if (!expr) return [];
 
-    if (!expr) return blocks;
+            let blocks = [];
+            
+            // 1. Isola il meno iniziale (Logica intelligente per non rompere i polinomi)
+            let tempExpr = expr;
+            let leadingMinus = false;
+            
+            if (tempExpr.startsWith('-')) {
+                let rest = tempExpr.substring(1);
+                let bal = 0;
+                let isRestPoly = false;
+                for (let i = 0; i < rest.length; i++) {
+                    if (rest[i] === '(') bal++;
+                    if (rest[i] === ')') bal--;
+                    if (bal === 0 && (rest[i] === '+' || (rest[i] === '-' && rest[i-1] !== '^'))) {
+                        isRestPoly = true;
+                        break;
+                    }
+                }
+                if (!isRestPoly) {
+                    leadingMinus = true;
+                    expr = rest;
+                }
+            }
+
+            if (leadingMinus) blocks.push("-");
+            if (!expr) return blocks;
 
             // Controllo se è un Polinomio (presenza di + o - fuori dalle parentesi)
             let bal = 0;
@@ -63,12 +100,19 @@
             }
 
             // Se è un polinomio (es. x^2-9), restituisco il blocco intero
-            if (isPoly) return [expr];
+            if (isPoly) {
+                blocks.push(expr);
+                return blocks;
+            }
 
             // Altrimenti, divido per fattori (moltiplicazioni implicite)
-            let blocks = [];
             let start = 0;
             bal = 0;
+            if (expr.length === 1) {
+                blocks.push(expr);
+                return blocks;
+            }
+
             for (let i = 0; i < expr.length; i++) {
                 if (expr[i] === '(') bal++;
                 if (expr[i] === ')') bal--;
@@ -78,12 +122,12 @@
                     let next = expr[i+1];
                     let split = false;
 
-                    if (next === '^') split = false; // Non spezzare prima dell'esponente
-                    else if (curr === ')') split = true; // Spezza dopo chiusura parentesi
-                    else if (next === '(') split = true; // Spezza prima di apertura parentesi
-                    else if (/[0-9]/.test(curr) && /[a-zA-Z]/.test(next)) split = true; // Numero-Lettera (2x)
-                    else if (/[a-zA-Z]/.test(curr) && /[a-zA-Z]/.test(next)) split = true; // Lettera-Lettera (xy)
-                    else if (/[a-zA-Z]/.test(curr) && /[0-9]/.test(next)) split = true; // Lettera-Numero (x2)
+                    if (next === '^') split = false; 
+                    else if (curr === ')') split = true; 
+                    else if (next === '(') split = true; 
+                    else if (/[0-9]/.test(curr) && /[a-zA-Z]/.test(next)) split = true; 
+                    else if (/[a-zA-Z]/.test(curr) && /[a-zA-Z]/.test(next)) split = true; 
+                    else if (/[a-zA-Z]/.test(curr) && /[0-9]/.test(next)) split = true; 
 
                     if (split) {
                         blocks.push(expr.substring(start, i + 1));
@@ -94,95 +138,115 @@
             blocks.push(expr.substring(start));
             return blocks;
         }
-function getGCD(a, b) {
-    a = Math.abs(a);
-    b = Math.abs(b);
-    while (b) {
-        a %= b;
-        [a, b] = [b, a];
-    }
-    return a;
-}
-        function simplify() {
-    const [a, b] = selected;
-    if (a.parentElement === b.parentElement) {
-        alert("Puoi semplificare solo tra numeratore e denominatore!");
-        selected.forEach(el => el.classList.remove('selected'));
-        selected = [];
-        return;
-    }
 
-    let c1 = a.dataset.content;
-    let c2 = b.dataset.content;
-
-    // --- NUOVA LOGICA: SEMPLIFICAZIONE NUMERICA ---
-    let n1 = Number(c1), n2 = Number(c2);
-    if (!isNaN(n1) && !isNaN(n2)) {
-        let common = getGCD(n1, n2);
-        if (common > 1) {
-            a.classList.add('simplified');
-            b.classList.add('simplified');
-            let res1 = n1 / common;
-            let res2 = n2 / common;
-            // Aggiunge i nuovi blocchi solo se il risultato è diverso da 1
-            if (res1 > 1) addBlock(a.parentElement, res1.toString());
-            if (res2 > 1) addBlock(b.parentElement, res2.toString());
-            
-            selected.forEach(el => el.classList.remove('selected'));
-            selected = [];
-            return; // Esci, abbiamo finito con i numeri
-        } else {
-            alert("Nessun divisore comune!");
-            selected.forEach(el => el.classList.remove('selected'));
-            selected = [];
-            return;
+        // --- FUNZIONI DI SUPPORTO ---
+        function getGCD(a, b) {
+            a = Math.abs(a);
+            b = Math.abs(b);
+            while (b) {
+                a %= b;
+                [a, b] = [b, a];
+            }
+            return a;
         }
-    }
-            // --- LOGICA SPECIALE PER I SEGNI MENO ---
-    if (c1 === "-" && c2 === "-") {
-        // Funziona sia se sono nello stesso parent (es. numeratore) 
-        // sia se sono uno sopra e uno sotto
-        a.classList.add('simplified');
-        b.classList.add('simplified');
-        
-        // Se erano nello stesso lato (es. - * -), potresti voler aggiungere un "+" 
-        // ma in algebra solitamente si lascia vuoto (sottointeso)
-        
-        resetSelection();
-        return;
-    }
 
-    // --- LOGICA ALGEBRICA (Invariata) ---
-    let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
-    let base1 = m1[1], exp1 = parseInt(m1[2] || 1);
-    let base2 = m2[1], exp2 = parseInt(m2[2] || 1);
+        // --- SISTEMA DI ERRORE VISIVO ---
+        function showError(blocksToFlash) {
+            blocksToFlash.forEach(b => {
+                b.classList.remove('selected');
+                b.classList.add('error-flash');
+                setTimeout(() => {
+                    b.classList.remove('error-flash');
+                }, 800); // Rimuove la classe dopo 800ms (durata dell'animazione CSS)
+            });
+            selected = [];
+        }
 
-    if (areEquivalent(base1, base2)) {
-        a.classList.add('simplified'); 
-        b.classList.add('simplified');
-        let diff = exp1 - exp2;
-        if (diff > 0) addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
-        else if (diff < 0) addBlock(b.parentElement, Math.abs(diff) === 1 ? base2 : `${base2}^${Math.abs(diff)}`);
-    } else { 
-        alert("Le basi non corrispondono!"); 
-    }
+        // --- SEMPLIFICAZIONE ---
+        function simplify() {
+            const [a, b] = selected;
+            let c1 = a.dataset.content;
+            let c2 = b.dataset.content;
 
-    selected.forEach(el => el.classList.remove('selected'));
-    selected = [];
-}
+            // Logica Speciale per i Segni Meno (Bug 1 risolto)
+            if (c1 === "-" && c2 === "-") {
+                a.classList.add('simplified');
+                b.classList.add('simplified');
+                selected.forEach(el => el.classList.remove('selected'));
+                selected = [];
+                return;
+            }
+
+            // Controllo Posizione: non puoi semplificare nello stesso contenitore
+            if (a.parentElement === b.parentElement) {
+                showError(selected);
+                return;
+            }
+
+            // Logica Semplificazione Numerica
+            let n1 = Number(c1), n2 = Number(c2);
+            if (!isNaN(n1) && !isNaN(n2)) {
+                let common = getGCD(n1, n2);
+                if (common > 1) {
+                    a.classList.add('simplified');
+                    b.classList.add('simplified');
+                    let res1 = n1 / common;
+                    let res2 = n2 / common;
+                    if (res1 > 1) addBlock(a.parentElement, res1.toString());
+                    if (res2 > 1) addBlock(b.parentElement, res2.toString());
+                    
+                    selected.forEach(el => el.classList.remove('selected'));
+                    selected = [];
+                    return; 
+                } else {
+                    showError(selected);
+                    return;
+                }
+            }
+
+            // Logica Algebrica Standard
+            let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
+            let base1 = m1[1], exp1 = parseInt(m1[2] || 1);
+            let base2 = m2[1], exp2 = parseInt(m2[2] || 1);
+
+            if (areEquivalent(base1, base2)) {
+                a.classList.add('simplified'); 
+                b.classList.add('simplified');
+                let diff = exp1 - exp2;
+                if (diff > 0) addBlock(a.parentElement, diff === 1 ? base1 : `${base1}^${diff}`);
+                else if (diff < 0) addBlock(b.parentElement, Math.abs(diff) === 1 ? base2 : `${base2}^${Math.abs(diff)}`);
+                
+                selected.forEach(el => el.classList.remove('selected'));
+                selected = [];
+            } else { 
+                showError(selected);
+            }
+        }
+
         // --- MOTORE DI VERIFICA MATEMATICA ---
         function areEquivalent(e1, e2) {
             if (!e1 || !e2) return false;
             try {
                 const prepare = (str) => {
-                    return ("(" + str + ")")
+                    let res = "(" + str + ")";
+                    // Bug 2 risolto: Trasforma i meno unari in moltiplicazioni per -1 
+                    // per evitare il SyntaxError di javascript sulle potenze
+                    let prev;
+                    do {
+                        prev = res;
+                        res = res.replace(/(^|[\(\*\/\+\-])\s*-/g, '$1(-1)*');
+                    } while (prev !== res);
+
+                    return res
                         .replace(/\^/g, '**')
-                        .replace(/(\d)([a-zA-Z\(])/g, '$1*$2') // 2x o 2(
-                        .replace(/([a-zA-Z\)])(\()/g, '$1*$2') // x( o )(
-                        .replace(/(\))([a-zA-Z0-9])/g, '$1*$2'); // )x o )2
+                        .replace(/(\d)([a-zA-Z\(])/g, '$1*$2') 
+                        .replace(/([a-zA-Z\)])(\()/g, '$1*$2') 
+                        .replace(/(\))([a-zA-Z0-9])/g, '$1*$2'); 
                 };
+                
                 const p1 = prepare(e1), p2 = prepare(e2);
                 const vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
+                
                 for (let i = 0; i < 3; i++) {
                     let scope = {};
                     vars.forEach(v => scope[v] = Math.random() * 5 + 1);
@@ -219,6 +283,9 @@ function getGCD(a, b) {
             div.dataset.content = content;
             div.onclick = function() {
                 if (this.classList.contains('simplified')) return;
+                // Impedisce la selezione se sta lampeggiando per un errore
+                if (this.classList.contains('error-flash')) return; 
+
                 this.classList.toggle('selected');
                 if (this.classList.contains('selected')) selected.push(this);
                 else selected = selected.filter(el => el !== this);
@@ -227,21 +294,25 @@ function getGCD(a, b) {
             container.appendChild(div);
         }
 
-
-
         function decomposeBlock() {
-            if (selected.length !== 1) return alert("Seleziona un solo blocco da scomporre!");
+            // Selezionati più di uno o nessuno? Lampeggiano i selezionati e blocca l'operazione
+            if (selected.length !== 1) {
+                if (selected.length > 1) showError(selected);
+                return;
+            }
+            
             let target = selected[0];
             let formula = document.getElementById('splitInput').value;
+            if (!formula) return;
             
             if (areEquivalent(target.dataset.content, formula)) {
                 parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
                 target.remove();
                 document.getElementById('splitInput').value = '';
+                selected = [];
             } else {
-                alert("Scomposizione non valida!");
+                showError([target]); // Invia solo il blocco target da far lampeggiare
             }
-            selected = [];
         }
     </script>
 </body>
