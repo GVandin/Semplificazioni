@@ -2,52 +2,194 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Lavagna Algebrica Pro</title>
+    <title>MathBoard Pro - Algebra Interactive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f2f5; }
-        .controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
-        .fraction { display: flex; flex-direction: column; align-items: center; padding: 20px; width: 100%; }
-        .row { display: flex; gap: 8px; min-height: 90px; padding: 15px; align-items: center; flex-wrap: wrap; border: 1px dashed #999; width: 100%; justify-content: center; }
-        .line { width: 100%; max-width: 500px; height: 4px; background: #333; margin: 10px 0; }
-        .block { border: 3px solid #333; padding: 12px; border-radius: 8px; cursor: pointer; background: #fff; font-weight: bold; font-size: 1.5em; transition: 0.2s; user-select: none; position: relative; }
-        .selected { border: 4px solid #007bff; background: #e7f1ff; transform: scale(1.05); }
-        .simplified { text-decoration: line-through; opacity: 0.3; pointer-events: none; }
-        sup { font-size: 0.6em; vertical-align: super; }
-        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 5px; }
-        button { padding: 8px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #4cc9f0;
+            --danger: #f72585;
+            --success: #4caf50;
+            --bg: #f8f9fd;
+            --glass: rgba(255, 255, 255, 0.8);
+        }
 
-        /* --- EFFETTO LAMPEGGIO ROSSO --- */
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 40px 20px; 
+            background: linear-gradient(135deg, #e0e7ff 0%, #f8f9fd 100%);
+            min-height: 100vh;
+            margin: 0;
+            color: #2b2d42;
+        }
+
+        h2 { font-weight: 600; color: var(--secondary); margin-bottom: 30px; letter-spacing: -1px; }
+
+        /* Contenitori Glassmorphism */
+        .controls { 
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 25px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+            width: 100%; 
+            max-width: 650px; 
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #8d99ae;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        /* Input e Bottoni */
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        
+        input { 
+            padding: 12px 18px; 
+            border: 2px solid #edf2f4; 
+            border-radius: 12px; 
+            outline: none; 
+            transition: 0.3s;
+            font-size: 1em;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.1); }
+
+        button { 
+            padding: 12px 25px; 
+            cursor: pointer; 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            font-weight: 600;
+            transition: 0.3s;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        button:hover { background: var(--secondary); transform: translateY(-2px); }
+
+        /* Area Frazione */
+        .fraction-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .row { 
+            display: flex; 
+            gap: 12px; 
+            min-height: 100px; 
+            padding: 20px; 
+            align-items: center; 
+            flex-wrap: wrap; 
+            width: 100%; 
+            justify-content: center; 
+        }
+
+        .line { 
+            width: 90%; 
+            height: 6px; 
+            background: #2b2d42; 
+            margin: 15px 0; 
+            border-radius: 10px;
+            opacity: 0.8;
+        }
+
+        /* I Blocchi */
+        .block { 
+            background: white;
+            border: 2px solid #edf2f4;
+            padding: 15px 22px; 
+            border-radius: 16px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 1.4em; 
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            user-select: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        .block:hover { 
+            border-color: var(--accent);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+        }
+
+        .selected { 
+            border-color: var(--primary); 
+            background: #f0f3ff; 
+            transform: scale(1.1) translateY(-5px); 
+            box-shadow: 0 10px 25px rgba(67, 97, 238, 0.2);
+            z-index: 10;
+        }
+
+        .simplified { 
+            text-decoration: line-through; 
+            opacity: 0.2; 
+            pointer-events: none; 
+            transform: scale(0.9);
+        }
+
+        sup { font-size: 0.6em; color: var(--secondary); }
+
+        /* Animazioni Errore */
         @keyframes errorShake {
-            0%, 100% { border-color: #333; transform: translateX(0); }
-            25% { border-color: #dc3545; transform: translateX(-5px); background: #f8d7da; }
-            50% { border-color: #dc3545; transform: translateX(5px); }
-            75% { border-color: #dc3545; transform: translateX(-5px); }
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-8px); }
         }
         .error-flash {
-            animation: errorShake 0.3s ease-in-out 2;
-            border-color: #dc3545 !important;
-            color: #dc3545 !important;
+            animation: errorShake 0.4s ease-in-out;
+            border-color: var(--danger) !important;
+            color: var(--danger) !important;
+            background: #fff0f5 !important;
         }
     </style>
 </head>
 <body>
 
-    <h2>Lavagna Algebrica</h2>
+    <h2>MathBoard Pro</h2>
     
     <div class="controls">
-        <strong>1. Inserisci Frazione:</strong><br><br>
-        <input type="text" id="numInput" placeholder="Numeratore (es: x^2-9)">
-        <input type="text" id="denInput" placeholder="Denominatore (es: x+3)">
-        <button onclick="generateFraction()">Genera</button>
+        <span class="section-title">1. Configura Frazione</span>
+        <div class="input-group">
+            <input type="text" id="numInput" placeholder="Numeratore (es: x^2-9)">
+            <input type="text" id="denInput" placeholder="Denominatore (es: x+3)">
+            <button onclick="generateFraction()">Genera</button>
+        </div>
     </div>
 
     <div class="controls">
-        <strong>2. Azioni:</strong> (Seleziona un blocco per scomporlo)<br><br>
-        <input type="text" id="splitInput" placeholder="Scrivi scomposizione...">
-        <button onclick="decomposeBlock()">Scomponi</button>
+        <span class="section-title">2. Scomposizione</span>
+        <div class="input-group">
+            <input type="text" id="splitInput" placeholder="Scrivi il risultato (es: (x-3)(x+3))">
+            <button onclick="decomposeBlock()" style="background: var(--accent); box-shadow: 0 4px 15px rgba(76, 201, 240, 0.3);">Scomponi</button>
+        </div>
     </div>
 
-    <div class="fraction">
+    <div class="fraction-card">
         <div id="numerator" class="row"></div>
         <div class="line"></div>
         <div id="denominator" class="row"></div>
@@ -56,14 +198,11 @@
     <script>
         let selected = [];
 
-        // --- MOTORE DI PARSING ---
+        // --- MOTORE DI PARSING (Ottimizzato) ---
         function parseToBlocks(expr) {
             expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
             if (!expr) return [];
-
             let blocks = [];
-            
-            // Gestione segno meno iniziale (solo se non è un polinomio)
             let tempExpr = expr;
             let leadingMinus = false;
             if (tempExpr.startsWith('-')) {
@@ -79,8 +218,6 @@
                 if (!isRestPoly) { leadingMinus = true; expr = rest; }
             }
             if (leadingMinus) blocks.push("-");
-
-            // Controllo Polinomio
             let bal = 0, isPoly = false;
             for (let i = 0; i < expr.length; i++) {
                 if (expr[i] === '(') bal++;
@@ -90,11 +227,8 @@
                 }
             }
             if (isPoly) { blocks.push(expr); return blocks; }
-
-            // Divisione in fattori
             let start = 0; bal = 0;
             if (expr.length <= 1 && expr !== "") { blocks.push(expr); return blocks; }
-
             for (let i = 0; i < expr.length; i++) {
                 if (expr[i] === '(') bal++;
                 if (expr[i] === ')') bal--;
@@ -111,7 +245,6 @@
             return blocks;
         }
 
-        // --- FEEDBACK GRAFICO ERRORI ---
         function triggerErrorEffect(elements) {
             elements.forEach(el => {
                 el.classList.remove('selected');
@@ -121,22 +254,14 @@
             selected = [];
         }
 
-        // --- VERIFICA EQUIVALENZA (Fix Bug Loop Infinito) ---
         function areEquivalent(e1, e2) {
             if (!e1 || !e2) return false;
             try {
                 const prepare = (str) => {
                     let s = "(" + str + ")";
-                    // Trasformazione sicura dei meno unari senza loop infinito
-                    s = s.replace(/(^|[\(\+\-\*\/])\s*-/g, '$1§'); 
-                    s = s.replace(/§/g, '(0-1)*');
-                    
-                    return s.replace(/\^/g, '**')
-                            .replace(/(\d)([a-zA-Z\(])/g, '$1*$2')
-                            .replace(/([a-zA-Z\)])(\()/g, '$1*$2')
-                            .replace(/(\))([a-zA-Z0-9])/g, '$1*$2');
+                    s = s.replace(/(^|[\(\+\-\*\/])\s*-/g, '$1§').replace(/§/g, '(0-1)*');
+                    return s.replace(/\^/g, '**').replace(/(\d)([a-zA-Z\(])/g, '$1*$2').replace(/([a-zA-Z\)])(\()/g, '$1*$2').replace(/(\))([a-zA-Z0-9])/g, '$1*$2');
                 };
-                
                 let p1 = prepare(e1), p2 = prepare(e2);
                 let vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
                 for (let i = 0; i < 3; i++) {
@@ -153,37 +278,18 @@
             } catch(e) { return false; }
         }
 
-        function getGCD(a, b) {
-            a = Math.abs(a); b = Math.abs(b);
-            while (b) { a %= b; [a, b] = [b, a]; }
-            return a;
-        }
-
-        // --- SEMPLIFICAZIONE ---
         function simplify() {
             const [a, b] = selected;
             let c1 = a.dataset.content, c2 = b.dataset.content;
-
-            // Semplificazione Segni Meno (Bug 1 risolto)
             if (c1 === "-" && c2 === "-") {
-                a.classList.add('simplified');
-                b.classList.add('simplified');
-                a.classList.remove('selected');
-                b.classList.remove('selected');
-                selected = [];
-                return;
+                a.classList.add('simplified'); b.classList.add('simplified');
+                a.classList.remove('selected'); b.classList.remove('selected');
+                selected = []; return;
             }
-
-            // Controllo Posizione
-            if (a.parentElement === b.parentElement) {
-                triggerErrorEffect(selected);
-                return;
-            }
-
-            // Numeri
+            if (a.parentElement === b.parentElement) { triggerErrorEffect(selected); return; }
             let n1 = Number(c1), n2 = Number(c2);
             if (!isNaN(n1) && !isNaN(n2)) {
-                let common = getGCD(n1, n2);
+                let common = (function gcd(x,y){return y?gcd(y,x%y):x})(n1,n2);
                 if (common > 1) {
                     a.classList.add('simplified'); b.classList.add('simplified');
                     let r1 = n1/common, r2 = n2/common;
@@ -192,8 +298,6 @@
                     selected = []; return;
                 }
             }
-
-            // Algebrica
             let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
             if (m1 && m2 && areEquivalent(m1[1], m2[1])) {
                 a.classList.add('simplified'); b.classList.add('simplified');
@@ -201,12 +305,9 @@
                 if (d > 0) addBlock(a.parentElement, d === 1 ? m1[1] : `${m1[1]}^${d}`);
                 else if (d < 0) addBlock(b.parentElement, Math.abs(d) === 1 ? m2[1] : `${m2[1]}^${Math.abs(d)}`);
                 selected = [];
-            } else {
-                triggerErrorEffect(selected);
-            }
+            } else { triggerErrorEffect(selected); }
         }
 
-        // --- INTERFACCIA ---
         function generateFraction() {
             const nCont = document.getElementById('numerator'), dCont = document.getElementById('denominator');
             nCont.innerHTML = ''; dCont.innerHTML = '';
@@ -233,15 +334,12 @@
             if (selected.length !== 1) { if(selected.length > 1) triggerErrorEffect(selected); return; }
             let target = selected[0], formula = document.getElementById('splitInput').value;
             if (!formula) return;
-
             if (areEquivalent(target.dataset.content, formula)) {
                 parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
                 target.remove();
                 document.getElementById('splitInput').value = '';
                 selected = [];
-            } else {
-                triggerErrorEffect([target]);
-            }
+            } else { triggerErrorEffect([target]); }
         }
     </script>
 </body>
