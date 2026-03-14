@@ -10,7 +10,7 @@
             --secondary: #3f37c9;
             --accent: #4cc9f0;
             --danger: #f72585;
-            --success: #4caf50;
+            --success: #2ec4b6; /* Un verde acqua/smeraldo più moderno */
             --bg: #f8f9fd;
             --glass: rgba(255, 255, 255, 0.8);
         }
@@ -29,7 +29,6 @@
 
         h2 { font-weight: 600; color: var(--secondary); margin-bottom: 30px; letter-spacing: -1px; }
 
-        /* Contenitori Glassmorphism */
         .controls { 
             background: var(--glass);
             backdrop-filter: blur(10px);
@@ -51,7 +50,6 @@
             display: block;
         }
 
-        /* Input e Bottoni */
         .input-group { display: flex; gap: 10px; flex-wrap: wrap; }
         
         input { 
@@ -81,7 +79,6 @@
 
         button:hover { background: var(--secondary); transform: translateY(-2px); }
 
-        /* Area Frazione */
         .fraction-card {
             background: var(--glass);
             backdrop-filter: blur(10px);
@@ -116,7 +113,6 @@
             opacity: 0.8;
         }
 
-        /* I Blocchi */
         .block { 
             background: white;
             border: 2px solid #edf2f4;
@@ -128,6 +124,7 @@
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
             user-select: none;
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            position: relative;
         }
 
         .block:hover { 
@@ -144,11 +141,25 @@
             z-index: 10;
         }
 
+        /* --- EFFETTO SUCCESSO (VERDE) --- */
+        @keyframes successFlash {
+            0% { transform: scale(1.1); border-color: var(--primary); }
+            50% { transform: scale(1.2); border-color: var(--success); background: #e6fffa; color: var(--success); }
+            100% { transform: scale(1); border-color: var(--success); }
+        }
+        .success-flash {
+            animation: successFlash 0.5s ease-in-out;
+            border-color: var(--success) !important;
+            color: var(--success) !important;
+            z-index: 15;
+        }
+
         .simplified { 
             text-decoration: line-through; 
             opacity: 0.2; 
             pointer-events: none; 
             transform: scale(0.9);
+            transition: 0.5s all;
         }
 
         sup { font-size: 0.6em; color: var(--secondary); }
@@ -198,7 +209,6 @@
     <script>
         let selected = [];
 
-        // --- MOTORE DI PARSING (Ottimizzato) ---
         function parseToBlocks(expr) {
             expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
             if (!expr) return [];
@@ -278,32 +288,55 @@
             } catch(e) { return false; }
         }
 
+        // --- FUNZIONE DI SUPPORTO PER LA TRANSIZIONE ---
+        function finalizeSimplification(elements, callback) {
+            elements.forEach(el => {
+                el.classList.remove('selected');
+                el.classList.add('success-flash');
+            });
+
+            setTimeout(() => {
+                elements.forEach(el => {
+                    el.classList.remove('success-flash');
+                    el.classList.add('simplified');
+                });
+                if (callback) callback();
+            }, 500); // 500ms di gloria verde
+        }
+
         function simplify() {
             const [a, b] = selected;
             let c1 = a.dataset.content, c2 = b.dataset.content;
+            
+            // Caso Segni Meno
             if (c1 === "-" && c2 === "-") {
-                a.classList.add('simplified'); b.classList.add('simplified');
-                a.classList.remove('selected'); b.classList.remove('selected');
-                selected = []; return;
+                finalizeSimplification([a, b]);
+                selected = [];
+                return;
             }
+
             if (a.parentElement === b.parentElement) { triggerErrorEffect(selected); return; }
+            
             let n1 = Number(c1), n2 = Number(c2);
             if (!isNaN(n1) && !isNaN(n2)) {
                 let common = (function gcd(x,y){return y?gcd(y,x%y):x})(n1,n2);
                 if (common > 1) {
-                    a.classList.add('simplified'); b.classList.add('simplified');
                     let r1 = n1/common, r2 = n2/common;
-                    if (r1 !== 1) addBlock(a.parentElement, r1.toString());
-                    if (r2 !== 1) addBlock(b.parentElement, r2.toString());
+                    finalizeSimplification([a, b], () => {
+                        if (r1 !== 1) addBlock(a.parentElement, r1.toString());
+                        if (r2 !== 1) addBlock(b.parentElement, r2.toString());
+                    });
                     selected = []; return;
                 }
             }
+
             let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
             if (m1 && m2 && areEquivalent(m1[1], m2[1])) {
-                a.classList.add('simplified'); b.classList.add('simplified');
                 let d = parseInt(m1[2]||1) - parseInt(m2[2]||1);
-                if (d > 0) addBlock(a.parentElement, d === 1 ? m1[1] : `${m1[1]}^${d}`);
-                else if (d < 0) addBlock(b.parentElement, Math.abs(d) === 1 ? m2[1] : `${m2[1]}^${Math.abs(d)}`);
+                finalizeSimplification([a, b], () => {
+                    if (d > 0) addBlock(a.parentElement, d === 1 ? m1[1] : `${m1[1]}^${d}`);
+                    else if (d < 0) addBlock(b.parentElement, Math.abs(d) === 1 ? m2[1] : `${m2[1]}^${Math.abs(d)}`);
+                });
                 selected = [];
             } else { triggerErrorEffect(selected); }
         }
@@ -321,7 +354,7 @@
             div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
             div.dataset.content = content;
             div.onclick = function() {
-                if (this.classList.contains('simplified') || this.classList.contains('error-flash')) return;
+                if (this.classList.contains('simplified') || this.classList.contains('error-flash') || this.classList.contains('success-flash')) return;
                 this.classList.toggle('selected');
                 if (this.classList.contains('selected')) selected.push(this);
                 else selected = selected.filter(el => el !== this);
@@ -335,10 +368,14 @@
             let target = selected[0], formula = document.getElementById('splitInput').value;
             if (!formula) return;
             if (areEquivalent(target.dataset.content, formula)) {
-                parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
-                target.remove();
-                document.getElementById('splitInput').value = '';
-                selected = [];
+                // Anche qui un piccolo flash verde per la scomposizione corretta!
+                target.classList.add('success-flash');
+                setTimeout(() => {
+                    parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
+                    target.remove();
+                    document.getElementById('splitInput').value = '';
+                    selected = [];
+                }, 400);
             } else { triggerErrorEffect([target]); }
         }
     </script>
