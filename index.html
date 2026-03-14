@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>MathBoard Pro - Algebra Interactive</title>
+    <title>MathBoard Pro - Audio Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -10,7 +10,7 @@
             --secondary: #3f37c9;
             --accent: #4cc9f0;
             --danger: #f72585;
-            --success: #2ec4b6; /* Un verde acqua/smeraldo più moderno */
+            --success: #2ec4b6;
             --bg: #f8f9fd;
             --glass: rgba(255, 255, 255, 0.8);
         }
@@ -141,7 +141,6 @@
             z-index: 10;
         }
 
-        /* --- EFFETTO SUCCESSO (VERDE) --- */
         @keyframes successFlash {
             0% { transform: scale(1.1); border-color: var(--primary); }
             50% { transform: scale(1.2); border-color: var(--success); background: #e6fffa; color: var(--success); }
@@ -164,7 +163,6 @@
 
         sup { font-size: 0.6em; color: var(--secondary); }
 
-        /* Animazioni Errore */
         @keyframes errorShake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-8px); }
@@ -179,7 +177,7 @@
         }
     </style>
 </head>
-<body>
+<body onclick="initAudio()">
 
     <h2>MathBoard Pro</h2>
     
@@ -208,7 +206,58 @@
 
     <script>
         let selected = [];
+        let audioCtx = null;
 
+        // --- MOTORE AUDIO ---
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSuccessSound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            
+            // Prima nota (Do4)
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(261.63, now);
+            gain1.gain.setValueAtTime(0.2, now);
+            gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc1.connect(gain1); gain1.connect(audioCtx.destination);
+            osc1.start(); osc1.stop(now + 0.2);
+
+            // Seconda nota (Fa4 - Quarta ascendente)
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(349.23, now + 0.12);
+            gain2.gain.setValueAtTime(0, now);
+            gain2.gain.setValueAtTime(0.2, now + 0.12);
+            gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc2.connect(gain2); gain2.connect(audioCtx.destination);
+            osc2.start(now + 0.12); osc2.stop(now + 0.4);
+        }
+
+        function playErrorSound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sawtooth'; // Timbro più rauco
+            osc.frequency.setValueAtTime(100, now); // Nota grave
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.3); // Scivolamento verso il basso
+            
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(now + 0.3);
+        }
+
+        // --- LOGICA ALGEBRICA ---
         function parseToBlocks(expr) {
             expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
             if (!expr) return [];
@@ -256,6 +305,7 @@
         }
 
         function triggerErrorEffect(elements) {
+            playErrorSound();
             elements.forEach(el => {
                 el.classList.remove('selected');
                 el.classList.add('error-flash');
@@ -288,8 +338,8 @@
             } catch(e) { return false; }
         }
 
-        // --- FUNZIONE DI SUPPORTO PER LA TRANSIZIONE ---
         function finalizeSimplification(elements, callback) {
+            playSuccessSound();
             elements.forEach(el => {
                 el.classList.remove('selected');
                 el.classList.add('success-flash');
@@ -301,22 +351,17 @@
                     el.classList.add('simplified');
                 });
                 if (callback) callback();
-            }, 500); // 500ms di gloria verde
+            }, 500);
         }
 
         function simplify() {
             const [a, b] = selected;
             let c1 = a.dataset.content, c2 = b.dataset.content;
-            
-            // Caso Segni Meno
             if (c1 === "-" && c2 === "-") {
                 finalizeSimplification([a, b]);
-                selected = [];
-                return;
+                selected = []; return;
             }
-
             if (a.parentElement === b.parentElement) { triggerErrorEffect(selected); return; }
-            
             let n1 = Number(c1), n2 = Number(c2);
             if (!isNaN(n1) && !isNaN(n2)) {
                 let common = (function gcd(x,y){return y?gcd(y,x%y):x})(n1,n2);
@@ -329,7 +374,6 @@
                     selected = []; return;
                 }
             }
-
             let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
             if (m1 && m2 && areEquivalent(m1[1], m2[1])) {
                 let d = parseInt(m1[2]||1) - parseInt(m2[2]||1);
@@ -353,7 +397,8 @@
             div.className = 'block';
             div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
             div.dataset.content = content;
-            div.onclick = function() {
+            div.onclick = function(e) {
+                initAudio(); // Garantisce l'attivazione audio
                 if (this.classList.contains('simplified') || this.classList.contains('error-flash') || this.classList.contains('success-flash')) return;
                 this.classList.toggle('selected');
                 if (this.classList.contains('selected')) selected.push(this);
@@ -368,7 +413,7 @@
             let target = selected[0], formula = document.getElementById('splitInput').value;
             if (!formula) return;
             if (areEquivalent(target.dataset.content, formula)) {
-                // Anche qui un piccolo flash verde per la scomposizione corretta!
+                playSuccessSound();
                 target.classList.add('success-flash');
                 setTimeout(() => {
                     parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
