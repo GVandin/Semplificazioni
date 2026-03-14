@@ -218,21 +218,21 @@
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
             
-            // Prima nota (Do5 - Frequenza più alta)
+            // Prima nota (Do4)
             const osc1 = audioCtx.createOscillator();
             const gain1 = audioCtx.createGain();
             osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(523.25, now);
+            osc1.frequency.setValueAtTime(261.63, now);
             gain1.gain.setValueAtTime(0.2, now);
             gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
             osc1.connect(gain1); gain1.connect(audioCtx.destination);
             osc1.start(); osc1.stop(now + 0.2);
 
-            // Seconda nota (Fa5 - Quarta ascendente)
+            // Seconda nota (Fa4 - Quarta ascendente)
             const osc2 = audioCtx.createOscillator();
             const gain2 = audioCtx.createGain();
             osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(698.46, now + 0.12);
+            osc2.frequency.setValueAtTime(349.23, now + 0.12);
             gain2.gain.setValueAtTime(0, now);
             gain2.gain.setValueAtTime(0.2, now + 0.12);
             gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
@@ -246,14 +246,12 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             
-            osc.type = 'sawtooth'; 
-            osc.frequency.setValueAtTime(110, now); // Frequenza grave e costante (nessun bend)
+            osc.type = 'sawtooth'; // Timbro più rauco
+            osc.frequency.setValueAtTime(100, now); // Nota grave
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.3); // Scivolamento verso il basso
             
-            // Effetto "Ribattuto" lavorando sul volume
-            gain.gain.setValueAtTime(0.15, now); // Primo colpo
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1); // Fine primo colpo
-            gain.gain.setValueAtTime(0.15, now + 0.15); // Inizio secondo colpo (dopo una breve pausa)
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3); // Fade out secondo colpo
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
             
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(now + 0.3);
@@ -400,7 +398,7 @@
             div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
             div.dataset.content = content;
             div.onclick = function(e) {
-                initAudio();
+                initAudio(); // Garantisce l'attivazione audio
                 if (this.classList.contains('simplified') || this.classList.contains('error-flash') || this.classList.contains('success-flash')) return;
                 this.classList.toggle('selected');
                 if (this.classList.contains('selected')) selected.push(this);
