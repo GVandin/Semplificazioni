@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MathBoard Mobile</title>
+    <title>MathBoard Mobile Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -13,10 +13,9 @@
             --danger: #f72585;
             --success: #2ec4b6;
             --bg: #f8f9fd;
-            --glass: rgba(255, 255, 255, 0.9);
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 
         body { 
             font-family: 'Outfit', sans-serif; 
@@ -26,11 +25,8 @@
             background: var(--bg);
             margin: 0;
             padding: 10px;
-            color: #2b2d42;
-            padding-bottom: 320px; /* Spazio per il tastierino fisso */
+            padding-bottom: 280px; /* Spazio per la tastiera */
         }
-
-        h2 { font-size: 1.2rem; margin: 10px 0; color: var(--secondary); }
 
         .controls { 
             background: white;
@@ -42,32 +38,29 @@
             margin-bottom: 10px;
         }
 
-        .input-group { display: flex; gap: 8px; flex-direction: column; }
-        
         input { 
             padding: 12px; 
             border: 2px solid #edf2f4; 
             border-radius: 10px; 
-            font-size: 1rem;
+            font-size: 16px; /* Previene lo zoom su iOS */
             width: 100%;
+            margin-bottom: 8px;
             background: #fff;
         }
 
-        /* Highlight dell'input attivo */
         input:focus { border-color: var(--primary); outline: none; background: #f0f3ff; }
 
-        .btn-row { display: flex; gap: 8px; margin-top: 8px; }
-        button { 
-            flex: 1;
+        button.main-btn { 
+            width: 100%;
             padding: 12px; 
             background: var(--primary); 
             color: white; 
             border: none; 
             border-radius: 10px; 
             font-weight: 600;
+            font-size: 1rem;
         }
 
-        /* Area Frazione */
         .fraction-card {
             background: white;
             padding: 20px 10px;
@@ -77,82 +70,68 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 200px;
         }
 
-        .row { display: flex; gap: 8px; min-height: 60px; align-items: center; flex-wrap: wrap; justify-content: center; }
-        .line { width: 80%; height: 4px; background: #2b2d42; margin: 10px 0; border-radius: 5px; }
+        .row { display: flex; gap: 8px; min-height: 50px; align-items: center; flex-wrap: wrap; justify-content: center; width: 100%; }
+        .line { width: 90%; height: 4px; background: #2b2d42; margin: 10px 0; border-radius: 2px; }
 
         .block { 
-            background: #f8f9fd;
-            border: 2px solid #edf2f4;
-            padding: 8px 12px; 
-            border-radius: 10px; 
-            font-weight: 600;
-            font-size: 1.1rem;
+            background: #f8f9fd; border: 2px solid #edf2f4; padding: 10px 15px; 
+            border-radius: 10px; font-weight: 600; font-size: 1.2rem;
+            transition: 0.2s;
         }
         .selected { border-color: var(--primary); background: #f0f3ff; transform: scale(1.05); }
 
-        /* TASTIERINO MATEMATICO */
+        /* TASTIERINO */
         .keypad {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #d1d4d9;
-            padding: 8px;
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 5px;
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #ced4da; padding: 6px;
+            display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;
             z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
         }
 
         .key {
-            background: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 15px 0;
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+            background: #fff; border: none; border-radius: 5px;
+            height: 50px; font-size: 1.2rem; font-weight: 600;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            color: #2b2d42;
         }
 
-        .key:active { background: #abb2bf; }
-        .key.op { background: #f0f0f0; color: var(--primary); }
-        .key.action { background: #ffcc00; color: #000; font-size: 0.9rem; }
-        
-        sup { font-size: 0.6em; }
+        .key:active { background: #adb5bd; }
+        .key.op { background: #f8f9fa; color: var(--primary); }
+        .key.action { background: #ffc107; font-size: 0.9rem; }
 
-        /* Animazioni */
+        sup { font-size: 0.6em; color: var(--secondary); }
+
+        /* ANIMAZIONI */
+        @keyframes successFlash {
+            0% { transform: scale(1.1); border-color: var(--primary); }
+            50% { transform: scale(1.2); border-color: var(--success); background: #e6fffa; color: var(--success); }
+            100% { transform: scale(1); border-color: var(--success); }
+        }
+        .success-flash { animation: successFlash 0.5s ease-in-out; border-color: var(--success) !important; color: var(--success) !important; }
+
         @keyframes errorShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .error-flash { animation: errorShake 0.3s; border-color: var(--danger) !important; color: var(--danger); }
-        .simplified { opacity: 0.2; pointer-events: none; }
+        .error-flash { animation: errorShake 0.4s; border-color: var(--danger) !important; color: var(--danger) !important; background: #fff0f5 !important; }
+
+        .simplified { text-decoration: line-through; opacity: 0.3; pointer-events: none; transform: scale(0.9); transition: 0.5s; }
     </style>
 </head>
-<body onclick="initAudio()">
+<body>
 
-    <h2>MathBoard Mobile</h2>
+    <h2 style="font-size: 1.2rem; color: var(--secondary); margin-top: 5px;">MathBoard Mobile</h2>
     
     <div class="controls">
-        <div class="input-group">
-            <input type="text" id="numInput" placeholder="Numeratore" readonly onclick="setActive(this)">
-            <input type="text" id="denInput" placeholder="Denominatore" readonly onclick="setActive(this)">
-            <div class="btn-row">
-                <button onclick="generateFraction()">Genera</button>
-            </div>
-        </div>
+        <input type="text" id="numInput" placeholder="Numeratore" readonly onclick="setActive(this)">
+        <input type="text" id="denInput" placeholder="Denominatore" readonly onclick="setActive(this)">
+        <button class="main-btn" onclick="generateFraction()">Genera Frazione</button>
     </div>
 
     <div class="controls">
-        <div class="input-group">
-            <input type="text" id="splitInput" placeholder="Scomposizione" readonly onclick="setActive(this)">
-            <button onclick="decomposeBlock()" style="background: var(--accent);">Scomponi</button>
-        </div>
+        <input type="text" id="splitInput" placeholder="Scrivi la scomposizione" readonly onclick="setActive(this)">
+        <button class="main-btn" onclick="decomposeBlock()" style="background: var(--accent);">Scomponi Blocco</button>
     </div>
 
     <div class="fraction-card">
@@ -161,89 +140,86 @@
         <div id="denominator" class="row"></div>
     </div>
 
-    <div class="keypad">
-        <button class="key" onclick="press('x')">x</button>
-        <button class="key" onclick="press('y')">y</button>
-        <button class="key" onclick="press('z')">z</button>
-        <button class="key op" onclick="press('^')">x<sup>y</sup></button>
-        <button class="key op" onclick="press('+')">+</button>
-        <button class="key action" onclick="press('DEL')">⌫</button>
+    <div class="keypad" id="keypad">
+        <button class="key" data-val="x">x</button>
+        <button class="key" data-val="y">y</button>
+        <button class="key" data-val="z">z</button>
+        <button class="key op" data-val="^">x<sup>y</sup></button>
+        <button class="key op" data-val="+">+</button>
+        <button class="key action" data-val="DEL">⌫</button>
 
-        <button class="key" onclick="press('a')">a</button>
-        <button class="key" onclick="press('b')">b</button>
-        <button class="key" onclick="press('c')">c</button>
-        <button class="key op" onclick="press('(')">(</button>
-        <button class="key op" onclick="press(')')">)</button>
-        <button class="key op" onclick="press('-')">-</button>
+        <button class="key" data-val="a">a</button>
+        <button class="key" data-val="b">b</button>
+        <button class="key" data-val="c">c</button>
+        <button class="key op" data-val="(">(</button>
+        <button class="key op" data-val=")">)</button>
+        <button class="key op" data-val="-">-</button>
 
-        <button class="key" onclick="press('1')">1</button>
-        <button class="key" onclick="press('2')">2</button>
-        <button class="key" onclick="press('3')">3</button>
-        <button class="key" onclick="press('4')">4</button>
-        <button class="key" onclick="press('5')">5</button>
-        <button class="key" onclick="press('0')">0</button>
+        <button class="key" data-val="1">1</button>
+        <button class="key" data-val="2">2</button>
+        <button class="key" data-val="3">3</button>
+        <button class="key" data-val="4">4</button>
+        <button class="key" data-val="5">5</button>
+        <button class="key" data-val="0">0</button>
 
-        <button class="key" onclick="press('6')">6</button>
-        <button class="key" onclick="press('7')">7</button>
-        <button class="key" onclick="press('8')">8</button>
-        <button class="key" onclick="press('9')">9</button>
-        <button class="key action" style="grid-column: span 2; background: #ebedf0;" onclick="press('CLR')">CANC</button>
+        <button class="key" data-val="6">6</button>
+        <button class="key" data-val="7">7</button>
+        <button class="key" data-val="8">8</button>
+        <button class="key" data-val="9">9</button>
+        <button class="key action" data-val="CLR" style="grid-column: span 2;">CANC</button>
     </div>
 
     <script>
-        let selected = [];
         let audioCtx = null;
+        let selected = [];
         let activeInput = document.getElementById('numInput');
+
+        // --- FIX AUDIO IOS ---
+        function unlockAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            window.removeEventListener('touchstart', unlockAudio);
+            window.removeEventListener('mousedown', unlockAudio);
+        }
+        window.addEventListener('touchstart', unlockAudio);
+        window.addEventListener('mousedown', unlockAudio);
 
         // --- GESTIONE TASTIERINO ---
         function setActive(el) {
             activeInput = el;
-            // Scroll fluido all'input per vederlo bene sopra il tastierino
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.querySelectorAll('input').forEach(i => i.style.borderColor = '#edf2f4');
+            el.style.borderColor = 'var(--primary)';
         }
 
-     // Sostituisci la funzione press e aggiungi questa logica migliorata
-function press(key) {
-    if (!activeInput) return;
-    
-    // TRUCCO PER IOS: Sblocca l'audio su ogni tocco finché non è attivo
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
+        document.getElementById('keypad').addEventListener('touchstart', function(e) {
+            if (e.target.classList.contains('key') || e.target.parentElement.classList.contains('key')) {
+                const btn = e.target.closest('.key');
+                const val = btn.getAttribute('data-val');
+                if (!activeInput) return;
+                
+                if (val === 'DEL') activeInput.value = activeInput.value.slice(0, -1);
+                else if (val === 'CLR') activeInput.value = '';
+                else activeInput.value += val;
+                
+                e.preventDefault(); 
+            }
+        });
 
-    if (key === 'DEL') {
-        activeInput.value = activeInput.value.slice(0, -1);
-    } else if (key === 'CLR') {
-        activeInput.value = '';
-    } else {
-        activeInput.value += key;
-    }
-}
-
-        // --- MOTORE AUDIO (Originale) ---
-        function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-        }
-
+        // --- MOTORE AUDIO ---
         function playSuccessSound() {
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
             const osc1 = audioCtx.createOscillator();
             const gain1 = audioCtx.createGain();
-            osc1.frequency.setValueAtTime(261.63, now);
-            gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc1.type = 'sine'; osc1.frequency.setValueAtTime(261.63, now); // Do4
+            gain1.gain.setValueAtTime(0.2, now); gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
             osc1.connect(gain1); gain1.connect(audioCtx.destination);
             osc1.start(); osc1.stop(now + 0.2);
 
             const osc2 = audioCtx.createOscillator();
             const gain2 = audioCtx.createGain();
-            osc2.frequency.setValueAtTime(349.23, now + 0.12);
-            gain2.gain.setValueAtTime(0, now);
-            gain2.gain.setValueAtTime(0.2, now + 0.12);
+            osc2.type = 'sine'; osc2.frequency.setValueAtTime(349.23, now + 0.12); // Fa4
+            gain2.gain.setValueAtTime(0, now); gain2.gain.setValueAtTime(0.2, now + 0.12);
             gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
             osc2.connect(gain2); gain2.connect(audioCtx.destination);
             osc2.start(now + 0.12); osc2.stop(now + 0.4);
@@ -257,15 +233,63 @@ function press(key) {
             osc.type = 'sawtooth'; 
             osc.frequency.setValueAtTime(100, now);
             osc.frequency.exponentialRampToValueAtTime(60, now + 0.3);
-            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(now + 0.3);
         }
 
-        // --- LOGICA MATEMATICA (Mantenuta) ---
+        // --- MOTORE MATEMATICO ---
+        function parseToBlocks(expr) {
+            expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
+            if (!expr) return [];
+            let blocks = [];
+            let start = 0, bal = 0;
+            
+            // Gestione segno meno iniziale
+            if (expr.startsWith('-')) {
+                blocks.push("-");
+                expr = expr.substring(1);
+            }
+
+            // Verifica se è un polinomio unito (es: x^2+3x)
+            let isPoly = false;
+            for (let i = 0; i < expr.length; i++) {
+                if (expr[i] === '(') bal++;
+                if (expr[i] === ')') bal--;
+                if (bal === 0 && i > 0 && (expr[i] === '+' || (expr[i] === '-' && expr[i-1] !== '^'))) {
+                    isPoly = true; break;
+                }
+            }
+            if (isPoly) { blocks.push(expr); return blocks; }
+
+            // Divisione in blocchi per prodotti (es: (x-3)(x+3))
+            bal = 0;
+            if (expr.length <= 1 && expr !== "") { blocks.push(expr); return blocks; }
+            for (let i = 0; i < expr.length; i++) {
+                if (expr[i] === '(') bal++;
+                if (expr[i] === ')') bal--;
+                if (bal === 0 && i < expr.length - 1) {
+                    let curr = expr[i], next = expr[i+1], split = false;
+                    if (next === '^') split = false;
+                    else if (curr === ')' || next === '(') split = true;
+                    else if (/[0-9]/.test(curr) && /[a-zA-Z]/.test(next)) split = true;
+                    else if (/[a-zA-Z]/.test(curr) && (/[a-zA-Z]/.test(next) || /[0-9]/.test(next))) split = true;
+                    
+                    if (split) { blocks.push(expr.substring(start, i + 1)); start = i + 1; }
+                }
+            }
+            if(expr !== "") blocks.push(expr.substring(start));
+            return blocks;
+        }
+
         function areEquivalent(e1, e2) {
+            if (!e1 || !e2) return false;
             try {
-                const prepare = (str) => str.replace(/\^/g, '**').replace(/(\d)([a-z\(])/g, '$1*$2').replace(/([a-z\)])(\()/g, '$1*$2').replace(/(\))([a-z0-9])/g, '$1*$2');
+                const prepare = (str) => {
+                    let s = "(" + str + ")";
+                    s = s.replace(/(^|[\(\+\-\*\/])\s*-/g, '$1§').replace(/§/g, '(0-1)*');
+                    return s.replace(/\^/g, '**').replace(/(\d)([a-zA-Z\(])/g, '$1*$2').replace(/([a-zA-Z\)])(\()/g, '$1*$2').replace(/(\))([a-zA-Z0-9])/g, '$1*$2');
+                };
                 let p1 = prepare(e1), p2 = prepare(e2);
                 let vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
                 for (let i = 0; i < 3; i++) {
@@ -282,31 +306,12 @@ function press(key) {
             } catch(e) { return false; }
         }
 
-        function parseToBlocks(expr) {
-            expr = expr.replace(/\s+/g, '');
-            if (!expr) return [];
-            let blocks = [];
-            // Logica semplificata per blocchi tra parentesi o monomi
-            let start = 0, bal = 0;
-            for (let i = 0; i < expr.length; i++) {
-                if (expr[i] === '(') bal++;
-                if (expr[i] === ')') bal--;
-                if (bal === 0 && i < expr.length - 1) {
-                    if (expr[i] === ')' || (/[a-z0-9]/.test(expr[i]) && expr[i+1] === '(')) {
-                        blocks.push(expr.substring(start, i + 1));
-                        start = i + 1;
-                    }
-                }
-            }
-            blocks.push(expr.substring(start));
-            return blocks.filter(b => b !== "");
-        }
-
         function generateFraction() {
             const nCont = document.getElementById('numerator'), dCont = document.getElementById('denominator');
             nCont.innerHTML = ''; dCont.innerHTML = '';
             parseToBlocks(document.getElementById('numInput').value).forEach(b => addBlock(nCont, b));
             parseToBlocks(document.getElementById('denInput').value).forEach(b => addBlock(dCont, b));
+            selected = [];
         }
 
         function addBlock(container, content) {
@@ -315,36 +320,99 @@ function press(key) {
             div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
             div.dataset.content = content;
             div.onclick = function() {
-                if (this.classList.contains('simplified')) return;
+                if (this.classList.contains('simplified') || this.classList.contains('error-flash') || this.classList.contains('success-flash')) return;
+                
                 this.classList.toggle('selected');
-                selected = Array.from(document.querySelectorAll('.selected'));
-                if (selected.length === 2) {
-                    if (selected[0].parentElement !== selected[1].parentElement && areEquivalent(selected[0].dataset.content, selected[1].dataset.content)) {
-                        playSuccessSound();
-                        selected.forEach(s => { s.classList.remove('selected'); s.classList.add('simplified'); });
-                    } else {
-                        playErrorSound();
-                        selected.forEach(s => { s.classList.add('error-flash'); setTimeout(() => s.classList.remove('error-flash', 'selected'), 400); });
-                    }
-                    selected = [];
+                if (this.classList.contains('selected')) {
+                    selected.push(this);
+                } else {
+                    selected = selected.filter(el => el !== this);
                 }
+                
+                if (selected.length === 2) simplify();
             };
             container.appendChild(div);
         }
 
+        function triggerErrorEffect(elements) {
+            playErrorSound();
+            elements.forEach(el => {
+                el.classList.remove('selected');
+                el.classList.add('error-flash');
+                setTimeout(() => el.classList.remove('error-flash'), 800);
+            });
+            selected = [];
+        }
+
+        function finalizeSimplification(elements, callback) {
+            playSuccessSound();
+            elements.forEach(el => {
+                el.classList.remove('selected');
+                el.classList.add('success-flash');
+            });
+
+            setTimeout(() => {
+                elements.forEach(el => {
+                    el.classList.remove('success-flash');
+                    el.classList.add('simplified');
+                });
+                if (callback) callback();
+            }, 500);
+        }
+
+        function simplify() {
+            const [a, b] = selected;
+            let c1 = a.dataset.content, c2 = b.dataset.content;
+            
+            if (c1 === "-" && c2 === "-") {
+                finalizeSimplification([a, b]);
+                selected = []; return;
+            }
+            if (a.parentElement === b.parentElement) { triggerErrorEffect(selected); return; }
+            
+            let n1 = Number(c1), n2 = Number(c2);
+            if (!isNaN(n1) && !isNaN(n2)) {
+                let common = (function gcd(x,y){return y?gcd(y,x%y):x})(n1,n2);
+                if (common > 1) {
+                    let r1 = n1/common, r2 = n2/common;
+                    finalizeSimplification([a, b], () => {
+                        if (r1 !== 1) addBlock(a.parentElement, r1.toString());
+                        if (r2 !== 1) addBlock(b.parentElement, r2.toString());
+                    });
+                    selected = []; return;
+                }
+            }
+            
+            let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
+            if (m1 && m2 && areEquivalent(m1[1], m2[1])) {
+                let d = parseInt(m1[2]||1) - parseInt(m2[2]||1);
+                finalizeSimplification([a, b], () => {
+                    if (d > 0) addBlock(a.parentElement, d === 1 ? m1[1] : `${m1[1]}^${d}`);
+                    else if (d < 0) addBlock(b.parentElement, Math.abs(d) === 1 ? m2[1] : `${m2[1]}^${Math.abs(d)}`);
+                });
+                selected = [];
+            } else { triggerErrorEffect(selected); }
+        }
+
         function decomposeBlock() {
-            if (selected.length !== 1) return;
+            if (selected.length !== 1) { 
+                if(selected.length > 1) triggerErrorEffect(selected); 
+                return; 
+            }
             let target = selected[0], formula = document.getElementById('splitInput').value;
+            if (!formula) return;
+            
             if (areEquivalent(target.dataset.content, formula)) {
                 playSuccessSound();
-                parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
-                target.remove();
-                selected = [];
-                document.getElementById('splitInput').value = '';
-            } else {
-                playErrorSound();
-                target.classList.add('error-flash');
-                setTimeout(() => target.classList.remove('error-flash'), 400);
+                target.classList.add('success-flash');
+                setTimeout(() => {
+                    parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
+                    target.remove();
+                    document.getElementById('splitInput').value = '';
+                    selected = [];
+                }, 400);
+            } else { 
+                triggerErrorEffect([target]); 
             }
         }
     </script>
