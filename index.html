@@ -2,7 +2,8 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>MathBoard Pro - Audio Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MathBoard Mobile</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -12,189 +13,145 @@
             --danger: #f72585;
             --success: #2ec4b6;
             --bg: #f8f9fd;
-            --glass: rgba(255, 255, 255, 0.8);
+            --glass: rgba(255, 255, 255, 0.9);
         }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body { 
             font-family: 'Outfit', sans-serif; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            padding: 40px 20px; 
-            background: linear-gradient(135deg, #e0e7ff 0%, #f8f9fd 100%);
-            min-height: 100vh;
+            background: var(--bg);
             margin: 0;
+            padding: 10px;
             color: #2b2d42;
+            padding-bottom: 320px; /* Spazio per il tastierino fisso */
         }
 
-        h2 { font-weight: 600; color: var(--secondary); margin-bottom: 30px; letter-spacing: -1px; }
+        h2 { font-size: 1.2rem; margin: 10px 0; color: var(--secondary); }
 
         .controls { 
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            padding: 25px; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+            background: white;
+            padding: 15px; 
+            border-radius: 15px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
             width: 100%; 
-            max-width: 650px; 
-            margin-bottom: 20px;
-            border: 1px solid rgba(255,255,255,0.3);
+            max-width: 500px; 
+            margin-bottom: 10px;
         }
 
-        .section-title {
-            font-size: 0.9em;
-            text-transform: uppercase;
-            font-weight: 600;
-            color: #8d99ae;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .input-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .input-group { display: flex; gap: 8px; flex-direction: column; }
         
         input { 
-            padding: 12px 18px; 
+            padding: 12px; 
             border: 2px solid #edf2f4; 
-            border-radius: 12px; 
-            outline: none; 
-            transition: 0.3s;
-            font-size: 1em;
-            flex: 1;
-            min-width: 150px;
+            border-radius: 10px; 
+            font-size: 1rem;
+            width: 100%;
+            background: #fff;
         }
 
-        input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.1); }
+        /* Highlight dell'input attivo */
+        input:focus { border-color: var(--primary); outline: none; background: #f0f3ff; }
 
+        .btn-row { display: flex; gap: 8px; margin-top: 8px; }
         button { 
-            padding: 12px 25px; 
-            cursor: pointer; 
+            flex: 1;
+            padding: 12px; 
             background: var(--primary); 
             color: white; 
             border: none; 
-            border-radius: 12px; 
+            border-radius: 10px; 
             font-weight: 600;
-            transition: 0.3s;
-            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
         }
 
-        button:hover { background: var(--secondary); transform: translateY(-2px); }
-
+        /* Area Frazione */
         .fraction-card {
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 30px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+            background: white;
+            padding: 20px 10px;
+            border-radius: 20px;
             width: 100%;
-            max-width: 800px;
-            margin-top: 20px;
+            max-width: 500px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 200px;
         }
 
-        .row { 
-            display: flex; 
-            gap: 12px; 
-            min-height: 100px; 
-            padding: 20px; 
-            align-items: center; 
-            flex-wrap: wrap; 
-            width: 100%; 
-            justify-content: center; 
-        }
-
-        .line { 
-            width: 90%; 
-            height: 6px; 
-            background: #2b2d42; 
-            margin: 15px 0; 
-            border-radius: 10px;
-            opacity: 0.8;
-        }
+        .row { display: flex; gap: 8px; min-height: 60px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .line { width: 80%; height: 4px; background: #2b2d42; margin: 10px 0; border-radius: 5px; }
 
         .block { 
-            background: white;
+            background: #f8f9fd;
             border: 2px solid #edf2f4;
-            padding: 15px 22px; 
-            border-radius: 16px; 
-            cursor: pointer; 
-            font-weight: 600; 
-            font-size: 1.4em; 
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            user-select: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-            position: relative;
+            padding: 8px 12px; 
+            border-radius: 10px; 
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .selected { border-color: var(--primary); background: #f0f3ff; transform: scale(1.05); }
+
+        /* TASTIERINO MATEMATICO */
+        .keypad {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #d1d4d9;
+            padding: 8px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 5px;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
         }
 
-        .block:hover { 
-            border-color: var(--accent);
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+        .key {
+            background: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 15px 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
         }
 
-        .selected { 
-            border-color: var(--primary); 
-            background: #f0f3ff; 
-            transform: scale(1.1) translateY(-5px); 
-            box-shadow: 0 10px 25px rgba(67, 97, 238, 0.2);
-            z-index: 10;
-        }
+        .key:active { background: #abb2bf; }
+        .key.op { background: #f0f0f0; color: var(--primary); }
+        .key.action { background: #ffcc00; color: #000; font-size: 0.9rem; }
+        
+        sup { font-size: 0.6em; }
 
-        @keyframes successFlash {
-            0% { transform: scale(1.1); border-color: var(--primary); }
-            50% { transform: scale(1.2); border-color: var(--success); background: #e6fffa; color: var(--success); }
-            100% { transform: scale(1); border-color: var(--success); }
-        }
-        .success-flash {
-            animation: successFlash 0.5s ease-in-out;
-            border-color: var(--success) !important;
-            color: var(--success) !important;
-            z-index: 15;
-        }
-
-        .simplified { 
-            text-decoration: line-through; 
-            opacity: 0.2; 
-            pointer-events: none; 
-            transform: scale(0.9);
-            transition: 0.5s all;
-        }
-
-        sup { font-size: 0.6em; color: var(--secondary); }
-
-        @keyframes errorShake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-8px); }
-            50% { transform: translateX(8px); }
-            75% { transform: translateX(-8px); }
-        }
-        .error-flash {
-            animation: errorShake 0.4s ease-in-out;
-            border-color: var(--danger) !important;
-            color: var(--danger) !important;
-            background: #fff0f5 !important;
-        }
+        /* Animazioni */
+        @keyframes errorShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .error-flash { animation: errorShake 0.3s; border-color: var(--danger) !important; color: var(--danger); }
+        .simplified { opacity: 0.2; pointer-events: none; }
     </style>
 </head>
 <body onclick="initAudio()">
 
-    <h2>MathBoard Pro</h2>
+    <h2>MathBoard Mobile</h2>
     
     <div class="controls">
-        <span class="section-title">1. Configura Frazione</span>
         <div class="input-group">
-            <input type="text" id="numInput" placeholder="Numeratore (es: x^2-9)">
-            <input type="text" id="denInput" placeholder="Denominatore (es: x+3)">
-            <button onclick="generateFraction()">Genera</button>
+            <input type="text" id="numInput" placeholder="Numeratore" readonly onclick="setActive(this)">
+            <input type="text" id="denInput" placeholder="Denominatore" readonly onclick="setActive(this)">
+            <div class="btn-row">
+                <button onclick="generateFraction()">Genera</button>
+            </div>
         </div>
     </div>
 
     <div class="controls">
-        <span class="section-title">2. Scomposizione</span>
         <div class="input-group">
-            <input type="text" id="splitInput" placeholder="Scrivi il risultato (es: (x-3)(x+3))">
-            <button onclick="decomposeBlock()" style="background: var(--accent); box-shadow: 0 4px 15px rgba(76, 201, 240, 0.3);">Scomponi</button>
+            <input type="text" id="splitInput" placeholder="Scomposizione" readonly onclick="setActive(this)">
+            <button onclick="decomposeBlock()" style="background: var(--accent);">Scomponi</button>
         </div>
     </div>
 
@@ -204,11 +161,69 @@
         <div id="denominator" class="row"></div>
     </div>
 
+    <div class="keypad">
+        <button class="key" onclick="press('x')">x</button>
+        <button class="key" onclick="press('y')">y</button>
+        <button class="key" onclick="press('z')">z</button>
+        <button class="key op" onclick="press('^')">x<sup>y</sup></button>
+        <button class="key op" onclick="press('+')">+</button>
+        <button class="key action" onclick="press('DEL')">⌫</button>
+
+        <button class="key" onclick="press('a')">a</button>
+        <button class="key" onclick="press('b')">b</button>
+        <button class="key" onclick="press('c')">c</button>
+        <button class="key op" onclick="press('(')">(</button>
+        <button class="key op" onclick="press(')')">)</button>
+        <button class="key op" onclick="press('-')">-</button>
+
+        <button class="key" onclick="press('1')">1</button>
+        <button class="key" onclick="press('2')">2</button>
+        <button class="key" onclick="press('3')">3</button>
+        <button class="key" onclick="press('4')">4</button>
+        <button class="key" onclick="press('5')">5</button>
+        <button class="key" onclick="press('0')">0</button>
+
+        <button class="key" onclick="press('6')">6</button>
+        <button class="key" onclick="press('7')">7</button>
+        <button class="key" onclick="press('8')">8</button>
+        <button class="key" onclick="press('9')">9</button>
+        <button class="key action" style="grid-column: span 2; background: #ebedf0;" onclick="press('CLR')">CANC</button>
+    </div>
+
     <script>
         let selected = [];
         let audioCtx = null;
+        let activeInput = document.getElementById('numInput');
 
-        // --- MOTORE AUDIO ---
+        // --- GESTIONE TASTIERINO ---
+        function setActive(el) {
+            activeInput = el;
+            // Scroll fluido all'input per vederlo bene sopra il tastierino
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+     // Sostituisci la funzione press e aggiungi questa logica migliorata
+function press(key) {
+    if (!activeInput) return;
+    
+    // TRUCCO PER IOS: Sblocca l'audio su ogni tocco finché non è attivo
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    if (key === 'DEL') {
+        activeInput.value = activeInput.value.slice(0, -1);
+    } else if (key === 'CLR') {
+        activeInput.value = '';
+    } else {
+        activeInput.value += key;
+    }
+}
+
+        // --- MOTORE AUDIO (Originale) ---
         function initAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -217,21 +232,15 @@
         function playSuccessSound() {
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
-            
-            // Prima nota (Do4)
             const osc1 = audioCtx.createOscillator();
             const gain1 = audioCtx.createGain();
-            osc1.type = 'sine';
             osc1.frequency.setValueAtTime(261.63, now);
-            gain1.gain.setValueAtTime(0.2, now);
             gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
             osc1.connect(gain1); gain1.connect(audioCtx.destination);
             osc1.start(); osc1.stop(now + 0.2);
 
-            // Seconda nota (Fa4 - Quarta ascendente)
             const osc2 = audioCtx.createOscillator();
             const gain2 = audioCtx.createGain();
-            osc2.type = 'sine';
             osc2.frequency.setValueAtTime(349.23, now + 0.12);
             gain2.gain.setValueAtTime(0, now);
             gain2.gain.setValueAtTime(0.2, now + 0.12);
@@ -245,83 +254,18 @@
             const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            
-            osc.type = 'sawtooth'; // Timbro più rauco
-            osc.frequency.setValueAtTime(100, now); // Nota grave
-            osc.frequency.exponentialRampToValueAtTime(60, now + 0.3); // Scivolamento verso il basso
-            
-            gain.gain.setValueAtTime(0.15, now);
+            osc.type = 'sawtooth'; 
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.3);
             gain.gain.linearRampToValueAtTime(0, now + 0.3);
-            
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(now + 0.3);
         }
 
-        // --- LOGICA ALGEBRICA ---
-        function parseToBlocks(expr) {
-            expr = expr.replace(/\s+/g, '').replace(/\*/g, '');
-            if (!expr) return [];
-            let blocks = [];
-            let tempExpr = expr;
-            let leadingMinus = false;
-            if (tempExpr.startsWith('-')) {
-                let rest = tempExpr.substring(1);
-                let bal = 0, isRestPoly = false;
-                for (let i = 0; i < rest.length; i++) {
-                    if (rest[i] === '(') bal++;
-                    if (rest[i] === ')') bal--;
-                    if (bal === 0 && (rest[i] === '+' || (rest[i] === '-' && rest[i-1] !== '^'))) {
-                        isRestPoly = true; break;
-                    }
-                }
-                if (!isRestPoly) { leadingMinus = true; expr = rest; }
-            }
-            if (leadingMinus) blocks.push("-");
-            let bal = 0, isPoly = false;
-            for (let i = 0; i < expr.length; i++) {
-                if (expr[i] === '(') bal++;
-                if (expr[i] === ')') bal--;
-                if (bal === 0 && i > 0 && (expr[i] === '+' || (expr[i] === '-' && expr[i-1] !== '^'))) {
-                    isPoly = true; break;
-                }
-            }
-            if (isPoly) { blocks.push(expr); return blocks; }
-            let start = 0; bal = 0;
-            if (expr.length <= 1 && expr !== "") { blocks.push(expr); return blocks; }
-            for (let i = 0; i < expr.length; i++) {
-                if (expr[i] === '(') bal++;
-                if (expr[i] === ')') bal--;
-                if (bal === 0 && i < expr.length - 1) {
-                    let curr = expr[i], next = expr[i+1], split = false;
-                    if (next === '^') split = false;
-                    else if (curr === ')' || next === '(') split = true;
-                    else if (/[0-9]/.test(curr) && /[a-zA-Z]/.test(next)) split = true;
-                    else if (/[a-zA-Z]/.test(curr) && (/[a-zA-Z]/.test(next) || /[0-9]/.test(next))) split = true;
-                    if (split) { blocks.push(expr.substring(start, i + 1)); start = i + 1; }
-                }
-            }
-            if(expr !== "") blocks.push(expr.substring(start));
-            return blocks;
-        }
-
-        function triggerErrorEffect(elements) {
-            playErrorSound();
-            elements.forEach(el => {
-                el.classList.remove('selected');
-                el.classList.add('error-flash');
-                setTimeout(() => el.classList.remove('error-flash'), 800);
-            });
-            selected = [];
-        }
-
+        // --- LOGICA MATEMATICA (Mantenuta) ---
         function areEquivalent(e1, e2) {
-            if (!e1 || !e2) return false;
             try {
-                const prepare = (str) => {
-                    let s = "(" + str + ")";
-                    s = s.replace(/(^|[\(\+\-\*\/])\s*-/g, '$1§').replace(/§/g, '(0-1)*');
-                    return s.replace(/\^/g, '**').replace(/(\d)([a-zA-Z\(])/g, '$1*$2').replace(/([a-zA-Z\)])(\()/g, '$1*$2').replace(/(\))([a-zA-Z0-9])/g, '$1*$2');
-                };
+                const prepare = (str) => str.replace(/\^/g, '**').replace(/(\d)([a-z\(])/g, '$1*$2').replace(/([a-z\)])(\()/g, '$1*$2').replace(/(\))([a-z0-9])/g, '$1*$2');
                 let p1 = prepare(e1), p2 = prepare(e2);
                 let vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
                 for (let i = 0; i < 3; i++) {
@@ -338,51 +282,24 @@
             } catch(e) { return false; }
         }
 
-        function finalizeSimplification(elements, callback) {
-            playSuccessSound();
-            elements.forEach(el => {
-                el.classList.remove('selected');
-                el.classList.add('success-flash');
-            });
-
-            setTimeout(() => {
-                elements.forEach(el => {
-                    el.classList.remove('success-flash');
-                    el.classList.add('simplified');
-                });
-                if (callback) callback();
-            }, 500);
-        }
-
-        function simplify() {
-            const [a, b] = selected;
-            let c1 = a.dataset.content, c2 = b.dataset.content;
-            if (c1 === "-" && c2 === "-") {
-                finalizeSimplification([a, b]);
-                selected = []; return;
-            }
-            if (a.parentElement === b.parentElement) { triggerErrorEffect(selected); return; }
-            let n1 = Number(c1), n2 = Number(c2);
-            if (!isNaN(n1) && !isNaN(n2)) {
-                let common = (function gcd(x,y){return y?gcd(y,x%y):x})(n1,n2);
-                if (common > 1) {
-                    let r1 = n1/common, r2 = n2/common;
-                    finalizeSimplification([a, b], () => {
-                        if (r1 !== 1) addBlock(a.parentElement, r1.toString());
-                        if (r2 !== 1) addBlock(b.parentElement, r2.toString());
-                    });
-                    selected = []; return;
+        function parseToBlocks(expr) {
+            expr = expr.replace(/\s+/g, '');
+            if (!expr) return [];
+            let blocks = [];
+            // Logica semplificata per blocchi tra parentesi o monomi
+            let start = 0, bal = 0;
+            for (let i = 0; i < expr.length; i++) {
+                if (expr[i] === '(') bal++;
+                if (expr[i] === ')') bal--;
+                if (bal === 0 && i < expr.length - 1) {
+                    if (expr[i] === ')' || (/[a-z0-9]/.test(expr[i]) && expr[i+1] === '(')) {
+                        blocks.push(expr.substring(start, i + 1));
+                        start = i + 1;
+                    }
                 }
             }
-            let m1 = c1.match(/^(.*?)(?:\^(\d+))?$/), m2 = c2.match(/^(.*?)(?:\^(\d+))?$/);
-            if (m1 && m2 && areEquivalent(m1[1], m2[1])) {
-                let d = parseInt(m1[2]||1) - parseInt(m2[2]||1);
-                finalizeSimplification([a, b], () => {
-                    if (d > 0) addBlock(a.parentElement, d === 1 ? m1[1] : `${m1[1]}^${d}`);
-                    else if (d < 0) addBlock(b.parentElement, Math.abs(d) === 1 ? m2[1] : `${m2[1]}^${Math.abs(d)}`);
-                });
-                selected = [];
-            } else { triggerErrorEffect(selected); }
+            blocks.push(expr.substring(start));
+            return blocks.filter(b => b !== "");
         }
 
         function generateFraction() {
@@ -397,31 +314,38 @@
             div.className = 'block';
             div.innerHTML = content.replace(/\^(\d+)/g, '<sup>$1</sup>');
             div.dataset.content = content;
-            div.onclick = function(e) {
-                initAudio(); // Garantisce l'attivazione audio
-                if (this.classList.contains('simplified') || this.classList.contains('error-flash') || this.classList.contains('success-flash')) return;
+            div.onclick = function() {
+                if (this.classList.contains('simplified')) return;
                 this.classList.toggle('selected');
-                if (this.classList.contains('selected')) selected.push(this);
-                else selected = selected.filter(el => el !== this);
-                if (selected.length === 2) simplify();
+                selected = Array.from(document.querySelectorAll('.selected'));
+                if (selected.length === 2) {
+                    if (selected[0].parentElement !== selected[1].parentElement && areEquivalent(selected[0].dataset.content, selected[1].dataset.content)) {
+                        playSuccessSound();
+                        selected.forEach(s => { s.classList.remove('selected'); s.classList.add('simplified'); });
+                    } else {
+                        playErrorSound();
+                        selected.forEach(s => { s.classList.add('error-flash'); setTimeout(() => s.classList.remove('error-flash', 'selected'), 400); });
+                    }
+                    selected = [];
+                }
             };
             container.appendChild(div);
         }
 
         function decomposeBlock() {
-            if (selected.length !== 1) { if(selected.length > 1) triggerErrorEffect(selected); return; }
+            if (selected.length !== 1) return;
             let target = selected[0], formula = document.getElementById('splitInput').value;
-            if (!formula) return;
             if (areEquivalent(target.dataset.content, formula)) {
                 playSuccessSound();
-                target.classList.add('success-flash');
-                setTimeout(() => {
-                    parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
-                    target.remove();
-                    document.getElementById('splitInput').value = '';
-                    selected = [];
-                }, 400);
-            } else { triggerErrorEffect([target]); }
+                parseToBlocks(formula).forEach(p => addBlock(target.parentElement, p));
+                target.remove();
+                selected = [];
+                document.getElementById('splitInput').value = '';
+            } else {
+                playErrorSound();
+                target.classList.add('error-flash');
+                setTimeout(() => target.classList.remove('error-flash'), 400);
+            }
         }
     </script>
 </body>
