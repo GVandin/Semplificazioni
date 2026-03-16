@@ -186,8 +186,6 @@
         <div class="input-group">
             <input type="text" id="numInput" placeholder="Numeratore (es: x^2-9)">
             <input type="text" id="denInput" placeholder="Denominatore (es: x+3)">
-            
-            <button onclick="caricaEsercizioCasuale()" style="background: var(--success); box-shadow: 0 4px 15px rgba(46, 196, 182, 0.3);" title="Carica esercizio pronto">🎲 Casuale</button>
             <button onclick="generateFraction()">Genera</button>
         </div>
     </div>
@@ -209,29 +207,6 @@
     <script>
         let selected = [];
         let audioCtx = null;
-
-        // --- LIBRERIA ESERCIZI ---
-        const libreriaEsercizi = [
-            { num: "x^2-9", den: "x-3" },                 // Differenza quadrati base
-            { num: "x^2-4x+4", den: "x-2" },              // Quadrato di binomio
-            { num: "a^2-b^2", den: "a+b" },               // Differenza quadrati lettere
-            { num: "x^2+5x+6", den: "x+2" },              // Trinomio speciale
-            { num: "2x+4", den: "x+2" },                  // Raccoglimento a fattore comune
-            { num: "(x+1)^2-4", den: "x-1" },             // Differenza quadrati composta
-            { num: "y^2-16", den: "y+4" }                 // Variazione variabile
-        ];
-
-        function caricaEsercizioCasuale() {
-            initAudio(); // Assicura che l'audio parta anche se è il primo click
-            const indiceCasuale = Math.floor(Math.random() * libreriaEsercizi.length);
-            const esercizio = libreriaEsercizi[indiceCasuale];
-            
-            document.getElementById('numInput').value = esercizio.num;
-            document.getElementById('denInput').value = esercizio.den;
-            
-            generateFraction();
-            playSuccessSound(); // Feedback sonoro per indicare l'avvenuto caricamento
-        }
 
         // --- MOTORE AUDIO ---
         function initAudio() {
@@ -347,13 +322,8 @@
                     s = s.replace(/(^|[\(\+\-\*\/])\s*-/g, '$1§').replace(/§/g, '(0-1)*');
                     return s.replace(/\^/g, '**').replace(/(\d)([a-zA-Z\(])/g, '$1*$2').replace(/([a-zA-Z\)])(\()/g, '$1*$2').replace(/(\))([a-zA-Z0-9])/g, '$1*$2');
                 };
-                let s = str.replace(/\s+/g, '');
-                // Moltiplicazione implicita: 
-                // 1. tra numero e lettera (es: 6y -> 6*y)
-                // 2. tra parentesi e lettera/numero (es: y(x+6) -> y*(x+6))
-                // 3. tra due lettere (es: xy -> x*y)
-                s = s.replace(/([0-9a-zA-Z)])([a-zA-Z(])/g, '$1*$2');
-                s = s.replace(/([a-zA-Z])([0-9])/g, '$1*$2');
+                // FIX: Inserisce un * implicito tra due lettere (es: xy diventa x*y)
+                    s = s.replace(/([a-zA-Z])(?=[a-zA-Z])/g, '$1*');
                 let p1 = prepare(e1), p2 = prepare(e2);
                 let vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
                 for (let i = 0; i < 3; i++) {
