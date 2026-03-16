@@ -322,6 +322,8 @@
                     s = s.replace(/(^|[\(\+\-\*\/])\s*-/g, '$1§').replace(/§/g, '(0-1)*');
                     return s.replace(/\^/g, '**').replace(/(\d)([a-zA-Z\(])/g, '$1*$2').replace(/([a-zA-Z\)])(\()/g, '$1*$2').replace(/(\))([a-zA-Z0-9])/g, '$1*$2');
                 };
+                // FIX: Inserisce un * implicito tra due lettere (es: xy diventa x*y)
+                    s = s.replace(/([a-zA-Z])(?=[a-zA-Z])/g, '$1*');
                 let p1 = prepare(e1), p2 = prepare(e2);
                 let vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
                 for (let i = 0; i < 3; i++) {
