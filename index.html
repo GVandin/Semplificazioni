@@ -347,29 +347,42 @@
             selected = [];
         }
 
-        function areEquivalent(e1, e2) {
-            if (!e1 || !e2) return false;
-            try {
-                const prepare = (str) => {
-                    let s = "(" + str + ")";
-                    s = s.replace(/(^|[\(\+\-\*\/])\s*-/g, '$1§').replace(/§/g, '(0-1)*');
-                    return s.replace(/\^/g, '**').replace(/(\d)([a-zA-Z\(])/g, '$1*$2').replace(/([a-zA-Z\)])(\()/g, '$1*$2').replace(/(\))([a-zA-Z0-9])/g, '$1*$2');
-                };
-                let p1 = prepare(e1), p2 = prepare(e2);
-                let vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
-                for (let i = 0; i < 3; i++) {
-                    let scope = {};
-                    vars.forEach(v => scope[v] = Math.random() * 5 + 2);
-                    const ev = (expr) => {
-                        let temp = expr;
-                        vars.forEach(v => temp = temp.replace(new RegExp(v, 'g'), `(${scope[v]})`));
-                        return eval(temp);
-                    };
-                    if (Math.abs(ev(p1) - ev(p2)) > 0.01) return false;
-                }
-                return true;
-            } catch(e) { return false; }
+function areEquivalent(e1, e2) {
+    if (!e1 || !e2) return false;
+    try {
+        // Prepariamo le stringhe per essere leggibili da eval()
+        const prep = (s) => s.replace(/\^/g, '**').replace(/\s+/g, '');
+        let p1 = prep(e1), p2 = prep(e2);
+        
+        // Estraiamo tutte le variabili uniche presenti in entrambe le espressioni
+        let vars = [...new Set((p1 + p2).match(/[a-zA-Z]/g) || [])];
+        
+        // Eseguiamo il test più volte
+        for (let i = 0; i < 5; i++) {
+            // CREIAMO LO SCOPE UNA VOLTA SOLA PER QUESTA ITERAZIONE
+            // Così ogni variabile ha un valore fisso, uguale per p1 e p2
+            let scope = {};
+            vars.forEach(v => scope[v] = Math.random() * 5 + 1);
+            
+            // Funzione interna che usa lo scope fissato
+            const ev = (expr) => {
+                let temp = expr;
+                // Sostituiamo ogni variabile con il valore numerico (es: x -> (2.3))
+                // Usiamo il lookbehind o una sostituzione strategica per non confondere i nomi
+                vars.forEach(v => {
+                    // Questa regex sostituisce la lettera solo se non è parte di un comando più complesso, 
+                    // ma qui basta per le variabili semplici
+                    temp = temp.replace(new RegExp(v, 'g'), `(${scope[v]})`);
+                });
+                return eval(temp);
+            };
+            
+            // Se le due espressioni non danno lo stesso risultato, non sono equivalenti
+            if (Math.abs(ev(p1) - ev(p2)) > 0.001) return false;
         }
+        return true;
+    } catch(e) { return false; }
+}
 
         function finalizeSimplification(elements, callback) {
             playSuccessSound();
