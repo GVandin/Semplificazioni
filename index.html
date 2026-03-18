@@ -393,6 +393,12 @@
                     const ev = (expr) => {
                         let temp = expr;
                         vars.forEach(v => temp = temp.replace(new RegExp(v, 'g'), `(${scope[v]})`));
+                        
+                        // ECCO LA SOLUZIONE: 
+                        // Se due variabili erano vicine (es: xy), ora sono diventate (3)(4).
+                        // Questa riga le trasforma in (3)*(4) prima di fare il calcolo.
+                        temp = temp.replace(/\)\(/g, ')*(');
+                        
                         return eval(temp);
                     };
                     if (Math.abs(ev(p1) - ev(p2)) > 0.01) return false;
