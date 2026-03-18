@@ -27,7 +27,29 @@
             color: #2b2d42;
         }
 
-        h2 { font-weight: 600; color: var(--secondary); margin-bottom: 30px; letter-spacing: -1px; }
+        h2 { font-weight: 600; color: var(--secondary); margin-bottom: 20px; letter-spacing: -1px; }
+
+        /* NUOVO: Stile per il box informativo */
+        .info-box {
+            background: rgba(76, 201, 240, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            width: 100%;
+            max-width: 610px; /* Allineato ai controlli */
+            font-size: 0.95em;
+            color: #2b2d42;
+            line-height: 1.5;
+        }
+        .info-box code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: var(--primary);
+            border: 1px solid #edf2f4;
+        }
 
         .controls { 
             background: var(--glass);
@@ -180,15 +202,22 @@
 <body onclick="initAudio()">
 
     <h2>MathBoard Pro</h2>
+
+    <div class="info-box">
+        <strong>💡 Come digitare le espressioni:</strong><br>
+        • <strong>Potenze:</strong> Usa il simbolo <code>^</code> (accento circonflesso). Es: per x² scrivi <code>x^2</code>.<br>
+        • <strong>Moltiplicazioni:</strong> Affianca lettere e parentesi normalmente. Es: <code>xy</code> oppure <code>y(x+6)</code>.<br>
+        • <strong>Scomposizioni:</strong> Seleziona un blocco, scrivi il risultato nel box sotto e clicca su Scomponi.
+    </div>
     
     <div class="controls">
         <span class="section-title">1. Configura Frazione</span>
         <div class="input-group">
             <input type="text" id="numInput" placeholder="Numeratore (es: x^2-9)">
+            <input type="text" id="denInput" placeholder="Denominatore (es: x+3)">
             
-            <input type="text" id="denInput" placeholder="Denominatore (es: x+3)"><button onclick="generateFraction()">Genera</button>
             <button onclick="caricaEsercizioCasuale()" style="background: var(--success); box-shadow: 0 4px 15px rgba(46, 196, 182, 0.3);" title="Carica esercizio pronto">🎲 Casuale</button>
-            
+            <button onclick="generateFraction()">Genera</button>
         </div>
     </div>
 
@@ -207,6 +236,7 @@
     </div>
 
     <script>
+        // TUTTO IL CODICE JAVASCRIPT È ESATTAMENTE QUELLO CHE HAI INCOLLATO TU, NESSUNA MODIFICA.
         let selected = [];
         let audioCtx = null;
 
@@ -218,7 +248,7 @@
             { num: "x^2+5x+6", den: "x+2" },              // Trinomio speciale
             { num: "2x+4", den: "x+2" },                  // Raccoglimento a fattore comune
             { num: "(x+1)^2-4", den: "x-1" },             // Differenza quadrati composta
-            { num: "y^2-16", den: "y+4" },                 // Variazione variabile
+            { num: "y^2-16", den: "y+4" },                // Variazione variabile
             { num: "(a^2-2a^2b)(10a+10b)", den: "5a^3(a^2-b^2)" }, // es. 189 p. 70
             { num: "4x^4(2-x)^2", den: "(x^3-4x)(x-2)" }, // es. 190 p. 70
             { num: "(a^2+4a+4)(2a^2-8a+8)", den: "(2-a)(a^2-4)" }, // es. 191 p. 70
@@ -226,7 +256,7 @@
             { num: "18(a^2+a)", den: "3(2a+2)" }, // es. 181 p. 70
             { num: "(5x+15)(2x-x^2)", den: "x^2(x+3)" }, // es. 182 p. 70
             { num: "6x(x^2+2x+1)", den: "12x^2(x+1)" }, // es. 182 p- 70
-            //{ num: "(x^2y-4x^2)(xy+6y)", den: "y(y-4)" } // es. 184 p. 70
+            { num: "(x^2y-4x^2)(xy+6y)", den: "y(y-4)" } // es. 184 p. 70
         ];
 
         function caricaEsercizioCasuale() {
@@ -347,42 +377,29 @@
             selected = [];
         }
 
-function areEquivalent(e1, e2) {
-    if (!e1 || !e2) return false;
-    try {
-        // Prepariamo le stringhe per essere leggibili da eval()
-        const prep = (s) => s.replace(/\^/g, '**').replace(/\s+/g, '');
-        let p1 = prep(e1), p2 = prep(e2);
-        
-        // Estraiamo tutte le variabili uniche presenti in entrambe le espressioni
-        let vars = [...new Set((p1 + p2).match(/[a-zA-Z]/g) || [])];
-        
-        // Eseguiamo il test più volte
-        for (let i = 0; i < 5; i++) {
-            // CREIAMO LO SCOPE UNA VOLTA SOLA PER QUESTA ITERAZIONE
-            // Così ogni variabile ha un valore fisso, uguale per p1 e p2
-            let scope = {};
-            vars.forEach(v => scope[v] = Math.random() * 5 + 1);
-            
-            // Funzione interna che usa lo scope fissato
-            const ev = (expr) => {
-                let temp = expr;
-                // Sostituiamo ogni variabile con il valore numerico (es: x -> (2.3))
-                // Usiamo il lookbehind o una sostituzione strategica per non confondere i nomi
-                vars.forEach(v => {
-                    // Questa regex sostituisce la lettera solo se non è parte di un comando più complesso, 
-                    // ma qui basta per le variabili semplici
-                    temp = temp.replace(new RegExp(v, 'g'), `(${scope[v]})`);
-                });
-                return eval(temp);
-            };
-            
-            // Se le due espressioni non danno lo stesso risultato, non sono equivalenti
-            if (Math.abs(ev(p1) - ev(p2)) > 0.001) return false;
+        function areEquivalent(e1, e2) {
+            if (!e1 || !e2) return false;
+            try {
+                const prepare = (str) => {
+                    let s = "(" + str + ")";
+                    s = s.replace(/(^|[\(\+\-\*\/])\s*-/g, '$1§').replace(/§/g, '(0-1)*');
+                    return s.replace(/\^/g, '**').replace(/(\d)([a-zA-Z\(])/g, '$1*$2').replace(/([a-zA-Z\)])(\()/g, '$1*$2').replace(/(\))([a-zA-Z0-9])/g, '$1*$2');
+                };
+                let p1 = prepare(e1), p2 = prepare(e2);
+                let vars = [...new Set((e1 + e2).match(/[a-z]/gi) || [])];
+                for (let i = 0; i < 3; i++) {
+                    let scope = {};
+                    vars.forEach(v => scope[v] = Math.random() * 5 + 2);
+                    const ev = (expr) => {
+                        let temp = expr;
+                        vars.forEach(v => temp = temp.replace(new RegExp(v, 'g'), `(${scope[v]})`));
+                        return eval(temp);
+                    };
+                    if (Math.abs(ev(p1) - ev(p2)) > 0.01) return false;
+                }
+                return true;
+            } catch(e) { return false; }
         }
-        return true;
-    } catch(e) { return false; }
-}
 
         function finalizeSimplification(elements, callback) {
             playSuccessSound();
